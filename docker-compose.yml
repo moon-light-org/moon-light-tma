@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tma-starter-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      FRONTEND_URL: ${PUBLIC_URL}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/backend
+      - backend_node_modules:/backend/node_modules
+    command: npm run dev
+
+  # Vite server running on port 5173 and providing HMR
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile   # Node + npm, runs Vite
+    container_name: tma_starter_front
+    depends_on:
+      - backend
+    expose:
+      - "5173"                # Vite dev server
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+  
+  # Nginx proxy routes requests to back and front, runs the port that is served by Ngrok
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tma-starter-nginx
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+
+volumes:
+  frontend_node_modules:
+  backend_node_modules:
