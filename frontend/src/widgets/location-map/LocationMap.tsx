@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection, Point } from "geojson";
 import type { Location } from "../../entities/location/model/types";
@@ -8,6 +8,7 @@ type MapProps = {
   onMapPickLocation: (lat: number, lng: number) => void;
   onLocationSelect: (location: Location | null) => void;
   initialCenter?: { latitude: number; longitude: number };
+  focusCoordinates?: { latitude: number; longitude: number } | null;
 };
 
 const SOURCE_ID = "saved-locations";
@@ -39,9 +40,22 @@ export function LocationMap({
   onMapPickLocation,
   onLocationSelect,
   initialCenter = { latitude: 48.8566, longitude: 2.3522 },
+  focusCoordinates = null,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const geoJson = useMemo(() => toGeoJson(locations), [locations]);
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !focusCoordinates) {
+      return;
+    }
+    map.easeTo({
+      center: [focusCoordinates.longitude, focusCoordinates.latitude],
+      zoom: Math.max(map.getZoom(), 14),
+      duration: 450,
+    });
+  }, [focusCoordinates]);
 
   const handleMapClick = async (event: MapLayerMouseEvent) => {
     const map = mapRef.current?.getMap();
@@ -86,7 +100,7 @@ export function LocationMap({
         zoom: 12,
       }}
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
-      style={{ width: "100%", height: "100%" }}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID]}
       onClick={handleMapClick}
     >
@@ -103,10 +117,10 @@ export function LocationMap({
           type="circle"
           filter={["has", "point_count"]}
           paint={{
-            "circle-color": "#f59e0b",
-            "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 50, 24],
+            "circle-color": "#f7931a",
+            "circle-radius": ["step", ["get", "point_count"], 18, 20, 22, 50, 26],
             "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2,
+            "circle-stroke-width": 2.5,
           }}
         />
         <Layer
@@ -116,9 +130,10 @@ export function LocationMap({
           layout={{
             "text-field": "{point_count_abbreviated}",
             "text-size": 12,
+            "text-font": ["Noto Sans Bold"],
           }}
           paint={{
-            "text-color": "#111827",
+            "text-color": "#ffffff",
           }}
         />
         <Layer
@@ -126,10 +141,10 @@ export function LocationMap({
           type="circle"
           filter={["!", ["has", "point_count"]]}
           paint={{
-            "circle-color": "#2563eb",
-            "circle-radius": 7,
+            "circle-color": "#1a73e8",
+            "circle-radius": 8,
             "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2,
+            "circle-stroke-width": 2.5,
           }}
         />
       </Source>

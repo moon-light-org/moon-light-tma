@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, MapPin, AlertCircle, ShoppingBag, Utensils, Grid2x2 } from "lucide-react";
 import type { CreateLocationPayload, LocationCategory } from "../../../entities/location/model/types";
 
 type AddLocationModalProps = {
@@ -10,10 +11,10 @@ type AddLocationModalProps = {
   onSubmit: (payload: CreateLocationPayload) => Promise<void>;
 };
 
-const categories: Array<{ value: LocationCategory; label: string }> = [
-  { value: "grocery", label: "Grocery" },
-  { value: "restaurant-bar", label: "Restaurant / Bar" },
-  { value: "other", label: "Other" },
+const categories: Array<{ value: LocationCategory; label: string; Icon: React.ElementType }> = [
+  { value: "grocery",        label: "Grocery",    Icon: ShoppingBag },
+  { value: "restaurant-bar", label: "Food & Bar", Icon: Utensils },
+  { value: "other",          label: "Other",      Icon: Grid2x2 },
 ];
 
 export function AddLocationModal({
@@ -24,39 +25,24 @@ export function AddLocationModal({
   onClose,
   onSubmit,
 }: AddLocationModalProps) {
-  const [name, setName] = useState("");
+  const [name,        setName]        = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<LocationCategory>("other");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [schedules, setSchedules] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [category,    setCategory]    = useState<LocationCategory>("other");
+  const [websiteUrl,  setWebsiteUrl]  = useState("");
+  const [schedules,   setSchedules]   = useState("");
+  const [error,       setError]       = useState<string | null>(null);
 
-  if (!isOpen || !coordinates) {
-    return null;
-  }
+  if (!isOpen || !coordinates) return null;
 
   const reset = () => {
-    setName("");
-    setDescription("");
-    setCategory("other");
-    setWebsiteUrl("");
-    setImageUrl("");
-    setSchedules("");
-    setError(null);
+    setName(""); setDescription(""); setCategory("other");
+    setWebsiteUrl(""); setSchedules(""); setError(null);
   };
 
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+  const handleClose = () => { reset(); onClose(); };
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError("Location name is required");
-      return;
-    }
-
+    if (!name.trim()) { setError("Location name is required"); return; }
     try {
       setError(null);
       await onSubmit({
@@ -67,85 +53,111 @@ export function AddLocationModal({
         longitude: coordinates.longitude,
         category,
         websiteUrl: websiteUrl.trim() || undefined,
-        imageUrl: imageUrl.trim() || undefined,
         schedules: schedules.trim() || undefined,
       });
       reset();
       onClose();
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Failed to create location";
-      setError(message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create location");
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={handleClose}>
-      <div className="modal-sheet" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Add Location</h2>
-          <button type="button" onClick={handleClose} className="ghost-button">
-            Close
+    <div className="sheet-backdrop" onClick={handleClose} role="dialog" aria-modal="true" aria-label="Add location">
+      <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" />
+
+        <div className="sheet-header">
+          <h2>Add location</h2>
+          <button type="button" className="sheet-close" onClick={handleClose} aria-label="Close">
+            <X size={16} />
           </button>
         </div>
 
-        <p className="coordinates">
-          {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
+        <p className="sheet-coords">
+          <MapPin size={13} />
+          {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}
         </p>
 
-        <label>
-          Name
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="BTC-friendly cafe" />
-        </label>
+        <div className="sheet-body">
+          {error && (
+            <div className="form-error" role="alert">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
 
-        <label>
-          Category
-          <select value={category} onChange={(event) => setCategory(event.target.value as LocationCategory)}>
-            {categories.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="loc-name">Name</label>
+            <input
+              id="loc-name"
+              className="form-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Bitcoin Café"
+              autoComplete="off"
+            />
+          </div>
 
-        <label>
-          Description
-          <textarea
-            rows={3}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="What can people expect here?"
-          />
-        </label>
+          <div className="form-group">
+            <span className="form-label">Category</span>
+            <div className="category-pills">
+              {categories.map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`category-pill${category === value ? " is-active" : ""}`}
+                  onClick={() => setCategory(value)}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <label>
-          Website URL
-          <input
-            value={websiteUrl}
-            onChange={(event) => setWebsiteUrl(event.target.value)}
-            placeholder="https://example.com"
-          />
-        </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="loc-desc">Description</label>
+            <textarea
+              id="loc-desc"
+              className="form-textarea"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What makes this spot BTC-friendly?"
+            />
+          </div>
 
-        <label>
-          Image URL
-          <input
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-            placeholder="https://example.com/image.jpg"
-          />
-        </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="loc-url">Website</label>
+            <input
+              id="loc-url"
+              className="form-input"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="https://example.com"
+              type="url"
+              inputMode="url"
+            />
+          </div>
 
-        <label>
-          Opening Hours
-          <input value={schedules} onChange={(event) => setSchedules(event.target.value)} placeholder="Mon-Sat 10:00-20:00" />
-        </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="loc-hours">Opening hours</label>
+            <input
+              id="loc-hours"
+              className="form-input"
+              value={schedules}
+              onChange={(e) => setSchedules(e.target.value)}
+              placeholder="Mon–Sat  10:00–20:00"
+            />
+          </div>
+        </div>
 
-        {error ? <p className="error-message">{error}</p> : null}
-
-        <button type="button" className="primary-button" onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Create Location"}
-        </button>
+        <div className="sheet-actions">
+          <button type="button" className="btn-primary" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Create location"}
+          </button>
+        </div>
       </div>
     </div>
   );
