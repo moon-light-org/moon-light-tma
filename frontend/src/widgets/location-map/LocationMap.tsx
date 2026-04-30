@@ -7,6 +7,12 @@ type MapProps = {
   locations: Location[];
   onMapPickLocation: (lat: number, lng: number) => void;
   onLocationSelect: (location: Location | null) => void;
+  onViewportChange?: (bounds: {
+    minLat: number;
+    minLon: number;
+    maxLat: number;
+    maxLon: number;
+  }) => void;
   initialCenter?: { latitude: number; longitude: number };
   focusCoordinates?: { latitude: number; longitude: number } | null;
 };
@@ -19,19 +25,24 @@ const POINT_LAYER_ID = "unclustered";
 function toGeoJson(locations: Location[]): FeatureCollection<Point> {
   return {
     type: "FeatureCollection",
-    features: locations.map((location) => ({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [location.longitude, location.latitude],
-      },
-      properties: {
-        id: location.id,
-        name: location.name,
-        description: location.description,
-        category: location.category,
-      },
-    })),
+    features: locations
+      .filter(
+        (location) =>
+          Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
+      )
+      .map((location) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [location.longitude, location.latitude],
+        },
+        properties: {
+          id: location.id,
+          name: location.name,
+          description: location.description,
+          category: location.category,
+        },
+      })),
   };
 }
 
@@ -39,6 +50,7 @@ export function LocationMap({
   locations,
   onMapPickLocation,
   onLocationSelect,
+  onViewportChange,
   initialCenter = { latitude: 48.8566, longitude: 2.3522 },
   focusCoordinates = null,
 }: MapProps) {
@@ -56,6 +68,19 @@ export function LocationMap({
       duration: 450,
     });
   }, [focusCoordinates]);
+
+  const emitViewportBounds = () => {
+    const bounds = mapRef.current?.getMap().getBounds();
+    if (!bounds || !onViewportChange) {
+      return;
+    }
+    onViewportChange({
+      minLat: bounds.getSouth(),
+      minLon: bounds.getWest(),
+      maxLat: bounds.getNorth(),
+      maxLon: bounds.getEast(),
+    });
+  };
 
   const handleMapClick = async (event: MapLayerMouseEvent) => {
     const map = mapRef.current?.getMap();
@@ -102,6 +127,8 @@ export function LocationMap({
       mapStyle="https://tiles.openfreemap.org/styles/liberty"
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID]}
+      onLoad={emitViewportBounds}
+      onMoveEnd={emitViewportBounds}
       onClick={handleMapClick}
     >
       <Source

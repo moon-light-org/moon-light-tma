@@ -6,6 +6,7 @@ import { getOrCreateUser } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
+import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
@@ -29,27 +30,56 @@ export function HomePage() {
   const telegramUser     = useTelegramUser();
   const telegramInitData = useMemo(() => getTelegramInitData(), []);
 
-  const [userProfile,       setUserProfile]       = useState<UserProfile | null>(null);
-  const [locations,         setLocations]         = useState<Location[]>([]);
-  const [selectedLocation,  setSelectedLocation]  = useState<Location | null>(null);
-  const [pickedCoordinates, setPickedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [focusCoordinates,  setFocusCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
+  const [locations,          setLocations]          = useState<Location[]>([]);
+  const [selectedLocation,   setSelectedLocation]   = useState<Location | null>(null);
+  const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
+  const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<LocationCategory[]>([]);
-  const [isTapSheetOpen,    setIsTapSheetOpen]    = useState(false);
-  const [isModalOpen,       setIsModalOpen]       = useState(false);
-  const [isLoading,         setIsLoading]         = useState(true);
-  const [isSubmitting,      setIsSubmitting]      = useState(false);
-  const [error,             setError]             = useState<string | null>(null);
+  const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
+  const [isModalOpen,        setIsModalOpen]        = useState(false);
+  const [isSearchOpen,       setIsSearchOpen]       = useState(false);
+  const [isLoading,          setIsLoading]          = useState(true);
+  const [isSubmitting,       setIsSubmitting]       = useState(false);
+  const [error,              setError]              = useState<string | null>(null);
+  const [viewportBounds,     setViewportBounds]     = useState<{
+    minLat: number;
+    minLon: number;
+    maxLat: number;
+    maxLon: number;
+  } | null>(null);
 
   useEffect(() => {
     let isActive = true;
     async function bootstrap() {
-      if (!telegramUser) { setIsLoading(false); return; }
+      if (!telegramUser) {
+        try {
+          const loadedLocations = await fetchLocations(null);
+          if (isActive) {
+            setLocations(loadedLocations);
+          }
+        } catch (err) {
+          if (isActive) {
+            setError(err instanceof Error ? err.message : "Failed to load locations");
+          }
+        } finally {
+          if (isActive) {
+            setIsLoading(false);
+          }
+        }
+        return;
+      }
 
-      // In local dev-fallback mode, skip backend entirely.
+      // In dev-fallback mode, skip user registration but still fetch locations.
       if (IS_DEV_FALLBACK) {
         setUserProfile(DEV_STUB_PROFILE);
-        setIsLoading(false);
+        try {
+          const loadedLocations = await fetchLocations(null);
+          if (isActive) setLocations(loadedLocations);
+        } catch {
+          // backend might not be running in pure frontend dev — that's fine
+        }
+        if (isActive) setIsLoading(false);
         return;
       }
 
@@ -75,6 +105,10 @@ export function HomePage() {
   }, [telegramInitData, telegramUser]);
 
   const handlePickLocation = (latitude: number, longitude: number) => {
+    if (!telegramUser || !userProfile) {
+      setError("Open in Telegram to add a new location.");
+      return;
+    }
     setPickedCoordinates({ latitude, longitude });
     setIsTapSheetOpen(true);
   };
@@ -104,6 +138,32 @@ export function HomePage() {
       ? locations
       : locations.filter((l) => selectedCategories.includes(l.category));
 
+  useEffect(() => {
+    if (!viewportBounds) {
+      return;
+    }
+
+    let isActive = true;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const loaded = await fetchLocations(telegramInitData, viewportBounds);
+        if (isActive) {
+          setLocations(loaded);
+        }
+      } catch (err) {
+        if (isActive) {
+          setError(err instanceof Error ? err.message : "Failed to fetch visible locations");
+        }
+      }
+    }, 180);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timer);
+    };
+  }, [telegramInitData, viewportBounds]);
+
   const handleLocateMe = () => {
     if (!navigator.geolocation) { setError("Geolocation is not available on this device."); return; }
     navigator.geolocation.getCurrentPosition(
@@ -122,19 +182,6 @@ export function HomePage() {
     );
   }
 
-  /* ── No telegram user ────────────────────────────────── */
-  if (!telegramUser || !userProfile) {
-    return (
-      <main className="center-screen">
-        <Map size={48} strokeWidth={1.5} />
-        <p className="center-screen__title">Open in Telegram</p>
-        <p>
-          Or set <code>VITE_USE_DEV_FALLBACK_USER=true</code> in local dev.
-        </p>
-      </main>
-    );
-  }
-
   /* ── Main UI ─────────────────────────────────────────── */
   return (
     <main className="map-shell">
@@ -143,6 +190,7 @@ export function HomePage() {
         locations={visibleLocations}
         onMapPickLocation={handlePickLocation}
         onLocationSelect={setSelectedLocation}
+        onViewportChange={setViewportBounds}
         focusCoordinates={focusCoordinates}
       />
 
@@ -150,7 +198,7 @@ export function HomePage() {
       <HomeHeader
         selectedCategories={selectedCategories}
         onToggleCategory={handleToggleCategory}
-        onSearchClick={() => setError("Search coming soon.")}
+        onSearchClick={() => setIsSearchOpen(true)}
       />
 
       {/* Floating action buttons */}
@@ -202,23 +250,46 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Tap to add – prompt sheet */}
-      <TapLocationSheet
-        isOpen={isTapSheetOpen}
-        coordinates={pickedCoordinates}
-        onClose={() => setIsTapSheetOpen(false)}
-        onAddLocation={() => { setIsTapSheetOpen(false); setIsModalOpen(true); }}
+      {/* Search sheet */}
+      <SearchSheet
+        isOpen={isSearchOpen}
+        locations={locations}
+        telegramInitData={telegramInitData}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectLocation={(loc) => {
+          setSelectedLocation(loc);
+          setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
+        }}
       />
 
-      {/* Add location form sheet */}
-      <AddLocationModal
-        isOpen={isModalOpen}
-        coordinates={pickedCoordinates}
-        telegramId={telegramUser.id.toString()}
-        isSubmitting={isSubmitting}
-        onClose={() => { setIsModalOpen(false); setPickedCoordinates(null); }}
-        onSubmit={handleCreateLocation}
-      />
+      {/* Tap to add – prompt sheet */}
+      {telegramUser && userProfile ? (
+        <>
+          <TapLocationSheet
+            isOpen={isTapSheetOpen}
+            coordinates={pickedCoordinates}
+            onClose={() => setIsTapSheetOpen(false)}
+            onAddLocation={() => { setIsTapSheetOpen(false); setIsModalOpen(true); }}
+          />
+
+          {/* Add location form sheet */}
+          <AddLocationModal
+            isOpen={isModalOpen}
+            coordinates={pickedCoordinates}
+            telegramId={telegramUser.id.toString()}
+            isSubmitting={isSubmitting}
+            onClose={() => { setIsModalOpen(false); setPickedCoordinates(null); }}
+            onSubmit={handleCreateLocation}
+          />
+        </>
+      ) : (
+        <div className="error-toast" role="status">
+          <Map size={18} />
+          <span>
+            Viewing existing locations only. Open in Telegram to add new ones.
+          </span>
+        </div>
+      )}
     </main>
   );
 }
