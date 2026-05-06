@@ -16,7 +16,6 @@ export type Location = {
 };
 
 export type CreateLocationPayload = {
-  telegramId: string;
   name: string;
   description?: string;
   latitude: number;

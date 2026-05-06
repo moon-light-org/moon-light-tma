@@ -9,7 +9,6 @@ export async function getOrCreateUser(
     method: "POST",
     telegramInitData,
     body: {
-      telegramId: telegramUser.id.toString(),
       nickname: telegramUser.username || `${telegramUser.first_name}`,
       avatarUrl: telegramUser.photo_url ?? null,
     },

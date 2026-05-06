@@ -5,7 +5,6 @@ import type { CreateLocationPayload, LocationCategory } from "../../../entities/
 type AddLocationModalProps = {
   isOpen: boolean;
   coordinates: { latitude: number; longitude: number } | null;
-  telegramId: string;
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (payload: CreateLocationPayload) => Promise<void>;
@@ -20,7 +19,6 @@ const categories: Array<{ value: LocationCategory; label: string; Icon: React.El
 export function AddLocationModal({
   isOpen,
   coordinates,
-  telegramId,
   isSubmitting,
   onClose,
   onSubmit,
@@ -46,7 +44,6 @@ export function AddLocationModal({
     try {
       setError(null);
       await onSubmit({
-        telegramId,
         name: name.trim(),
         description: description.trim() || undefined,
         latitude: coordinates.latitude,

@@ -276,7 +276,6 @@ export function HomePage() {
           <AddLocationModal
             isOpen={isModalOpen}
             coordinates={pickedCoordinates}
-            telegramId={telegramUser.id.toString()}
             isSubmitting={isSubmitting}
             onClose={() => { setIsModalOpen(false); setPickedCoordinates(null); }}
             onSubmit={handleCreateLocation}
