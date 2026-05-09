@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X, ExternalLink, AlertCircle, Map } from "lucide-react";
 import { fetchLocations, createLocation } from "../../entities/location/api/locationApi";
 import type { CreateLocationPayload, Location, LocationCategory } from "../../entities/location/model/types";
-import { getOrCreateUser } from "../../entities/user/api/userApi";
+import { getOrCreateUser, upsertUserProfile } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
@@ -11,6 +11,7 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
+import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 
 /** When VITE_USE_DEV_FALLBACK_USER=true we skip backend calls entirely. */
 const IS_DEV_FALLBACK =
@@ -41,6 +42,9 @@ export function HomePage() {
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
+  const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
+  const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
+  const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
   const [error,              setError]              = useState<string | null>(null);
   const [viewportBounds,     setViewportBounds]     = useState<{
     minLat: number;
@@ -91,6 +95,7 @@ export function HomePage() {
         if (!isActive) return;
         setUserProfile(user);
         setLocations(loadedLocations);
+        setIsOnboardingOpen(!isNicknameConfigured(user.nickname));
       } catch (err) {
         if (!isActive) return;
         // Show error in toast but don't block the map
@@ -103,6 +108,40 @@ export function HomePage() {
     void bootstrap();
     return () => { isActive = false; };
   }, [telegramInitData, telegramUser]);
+
+  const profileInitial = useMemo(() => {
+    const fromProfile = userProfile?.nickname?.trim();
+    if (fromProfile) {
+      return fromProfile.charAt(0).toUpperCase();
+    }
+    const fromTelegram = telegramUser?.first_name?.trim();
+    if (fromTelegram) {
+      return fromTelegram.charAt(0).toUpperCase();
+    }
+    return "?";
+  }, [telegramUser, userProfile?.nickname]);
+
+  const submitOnboardingNickname = async (nickname: string) => {
+    if (!telegramUser) {
+      return;
+    }
+    setIsOnboardingSubmitting(true);
+    setOnboardingError(null);
+    try {
+      const updatedProfile = await upsertUserProfile({
+        telegramUser,
+        telegramInitData,
+        nickname,
+      });
+      setUserProfile(updatedProfile);
+      setOnboardingError(null);
+    } catch (err) {
+      setOnboardingError(err instanceof Error ? err.message : "Failed to save nickname");
+      throw err;
+    } finally {
+      setIsOnboardingSubmitting(false);
+    }
+  };
 
   const handlePickLocation = (latitude: number, longitude: number) => {
     if (!telegramUser || !userProfile) {
@@ -199,6 +238,7 @@ export function HomePage() {
         selectedCategories={selectedCategories}
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
+        profileInitial={profileInitial}
       />
 
       {/* Floating action buttons */}
@@ -289,6 +329,24 @@ export function HomePage() {
           </span>
         </div>
       )}
+
+      {isOnboardingOpen && telegramUser && (
+        <OnboardingFlow
+          initialName={telegramUser.first_name}
+          isSubmitting={isOnboardingSubmitting}
+          error={onboardingError}
+          onSubmitNickname={submitOnboardingNickname}
+          onComplete={() => setIsOnboardingOpen(false)}
+        />
+      )}
     </main>
   );
+}
+
+function isNicknameConfigured(nickname: string | null | undefined): boolean {
+  const normalized = nickname?.trim() ?? "";
+  if (!normalized) {
+    return false;
+  }
+  return !/^user_\d+$/i.test(normalized);
 }

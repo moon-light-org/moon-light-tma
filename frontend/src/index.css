@@ -101,15 +101,19 @@ body {
   text-overflow: ellipsis;
 }
 
-.search-bar__logo {
-  width: 22px;
-  height: 22px;
+.search-bar__avatar {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f7931a 0%, #e8a200 100%);
+  background: linear-gradient(135deg, #5f63f2 0%, #4e54cc 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 /* ─── Filter Chips ───────────────────────────────────────────── */
@@ -809,4 +813,94 @@ code {
 .maplibregl-ctrl-top-left,
 .maplibregl-ctrl-top-right {
   display: none !important;
+}
+
+/* ─── Onboarding ───────────────────────────────────────────── */
+.onboarding-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.onboarding-panel {
+  width: min(420px, 100%);
+  min-height: 280px;
+  border: none;
+  border-radius: 24px;
+  padding: 30px 24px;
+  text-align: center;
+  background: #ffffff;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.onboarding-panel h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #161616;
+}
+
+.onboarding-panel p {
+  color: var(--c-text2);
+  font-size: 15px;
+}
+
+.onboarding-panel--form {
+  text-align: left;
+  align-items: stretch;
+}
+
+.onboarding-input {
+  width: 100%;
+  border: 1.5px solid var(--c-border);
+  border-radius: 12px;
+  background: #f6f7fb;
+  font: inherit;
+  font-size: 16px;
+  color: var(--c-text);
+  padding: 12px 14px;
+  margin-top: 4px;
+  outline: none;
+}
+
+.onboarding-input:focus {
+  border-color: var(--c-accent);
+  background: #ffffff;
+}
+
+.onboarding-submit {
+  margin-top: 2px;
+}
+
+.onboarding-error {
+  color: var(--c-danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.onboarding-blob {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  margin: 0 auto 8px;
+  background: radial-gradient(circle at 30% 30%, #8ca0ff 0%, #5f63f2 60%, #3d45be 100%);
+  animation: bob 1.6s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.04);
+  }
 }
