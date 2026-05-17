@@ -12,6 +12,7 @@ import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
+import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 
 /** When VITE_USE_DEV_FALLBACK_USER=true we skip backend calls entirely. */
 const IS_DEV_FALLBACK =
@@ -40,6 +41,7 @@ export function HomePage() {
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
+  const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
@@ -120,6 +122,13 @@ export function HomePage() {
     }
     return "?";
   }, [telegramUser, userProfile?.nickname]);
+
+  const placesAddedCount = useMemo(() => {
+    if (!userProfile) {
+      return 0;
+    }
+    return locations.filter((location) => location.user_id === userProfile.id).length;
+  }, [locations, userProfile]);
 
   const submitOnboardingNickname = async (nickname: string) => {
     if (!telegramUser) {
@@ -239,6 +248,7 @@ export function HomePage() {
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
+        onProfileClick={() => setIsProfileOpen(true)}
       />
 
       {/* Floating action buttons */}
@@ -300,6 +310,15 @@ export function HomePage() {
           setSelectedLocation(loc);
           setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
         }}
+      />
+
+      <ProfileSheet
+        isOpen={isProfileOpen}
+        profileInitial={profileInitial}
+        telegramUser={telegramUser}
+        userProfile={userProfile}
+        placesAddedCount={placesAddedCount}
+        onClose={() => setIsProfileOpen(false)}
       />
 
       {/* Tap to add – prompt sheet */}

@@ -6,6 +6,7 @@ type HomeHeaderProps = {
   onToggleCategory: (category: LocationCategory | "all") => void;
   onSearchClick: () => void;
   profileInitial: string;
+  onProfileClick: () => void;
 };
 
 const categories: Array<{
@@ -19,7 +20,13 @@ const categories: Array<{
   { id: "other",          label: "Other",   Icon: Grid2x2 },
 ];
 
-export function HomeHeader({ selectedCategories, onToggleCategory, onSearchClick, profileInitial }: HomeHeaderProps) {
+export function HomeHeader({
+  selectedCategories,
+  onToggleCategory,
+  onSearchClick,
+  profileInitial,
+  onProfileClick,
+}: HomeHeaderProps) {
   const isSelected = (category: LocationCategory | "all") => {
     if (category === "all") return selectedCategories.length === 0;
     return selectedCategories.includes(category);
@@ -34,6 +41,8 @@ export function HomeHeader({ selectedCategories, onToggleCategory, onSearchClick
             <Search size={16} />
           </span>
           <span className="search-bar__text">Search BTC places…</span>
+        </button>
+        <button className="profile-avatar-btn" type="button" onClick={onProfileClick} aria-label="Open profile">
           <span className="search-bar__avatar" aria-hidden="true">
             {profileInitial}
           </span>
