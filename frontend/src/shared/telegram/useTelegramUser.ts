@@ -39,6 +39,35 @@ export function getTelegramInitData(): string | null {
     return null;
   }
 
-  const webApp = (window as Window & { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
-  return webApp?.initData ?? null;
+  const telegramWindow = window as Window & {
+    Telegram?: {
+      WebApp?: { initData?: string };
+      WebView?: { initParams?: { tgWebAppData?: string } };
+    };
+  };
+
+  const directInitData = telegramWindow.Telegram?.WebApp?.initData?.trim();
+  if (directInitData) {
+    return directInitData;
+  }
+
+  const fromQuery = new URLSearchParams(window.location.search).get("tgWebAppData")?.trim();
+  if (fromQuery) {
+    return fromQuery;
+  }
+
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const fromHash = new URLSearchParams(hash).get("tgWebAppData")?.trim();
+  if (fromHash) {
+    return fromHash;
+  }
+
+  const webViewInitData = telegramWindow.Telegram?.WebView?.initParams?.tgWebAppData?.trim();
+  if (webViewInitData) {
+    return webViewInitData;
+  }
+
+  return null;
 }

@@ -29,7 +29,7 @@ const DEV_STUB_PROFILE: UserProfile = {
 
 export function HomePage() {
   const telegramUser     = useTelegramUser();
-  const telegramInitData = useMemo(() => getTelegramInitData(), []);
+  const telegramInitData = getTelegramInitData();
 
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
