@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 type FetchOptions = {
   method?: "GET" | "POST";
@@ -15,7 +15,8 @@ export async function httpJson<T>(path: string, options: FetchOptions = {}): Pro
     headers["X-Telegram-Init-Data"] = options.telegramInitData;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
     method: options.method ?? "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
