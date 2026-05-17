@@ -41,10 +41,20 @@ export function HomeHeader({
             <Search size={16} />
           </span>
           <span className="search-bar__text">Search BTC places…</span>
-        </button>
-        <button className="profile-avatar-btn" type="button" onClick={onProfileClick} aria-label="Open profile">
-          <span className="search-bar__avatar" aria-hidden="true">
-            {profileInitial}
+          <span className="search-bar__avatar-wrap">
+            <button
+              className="search-bar__avatar-btn"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onProfileClick();
+              }}
+              aria-label="Open profile"
+            >
+              <span className="search-bar__avatar" aria-hidden="true">
+                {profileInitial}
+              </span>
+            </button>
           </span>
         </button>
       </div>
