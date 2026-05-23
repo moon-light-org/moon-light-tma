@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, ExternalLink, AlertCircle, Map } from "lucide-react";
-import { fetchLocations, createLocation } from "../../entities/location/api/locationApi";
-import type { CreateLocationPayload, Location, LocationCategory } from "../../entities/location/model/types";
+import { AlertCircle, Map } from "lucide-react";
+import {
+  fetchLocations,
+  createLocation,
+  createLocationReview,
+  fetchLocationPhotos,
+  fetchLocationReviews,
+  uploadLocationPhoto,
+} from "../../entities/location/api/locationApi";
+import type {
+  CreateLocationPayload,
+  Location,
+  LocationCategory,
+  LocationPhoto,
+  LocationReview,
+} from "../../entities/location/model/types";
 import { getOrCreateUser, upsertUserProfile } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
+import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
 import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
 import { LocationMap } from "../../widgets/location-map/LocationMap";
@@ -35,6 +49,10 @@ export function HomePage() {
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
   const [selectedLocation,   setSelectedLocation]   = useState<Location | null>(null);
+  const [selectedLocationPhotos, setSelectedLocationPhotos] = useState<LocationPhoto[]>([]);
+  const [selectedLocationReviews, setSelectedLocationReviews] = useState<LocationReview[]>([]);
+  const [isSelectedLocationPhotosLoading, setIsSelectedLocationPhotosLoading] = useState(false);
+  const [isSelectedLocationReviewsLoading, setIsSelectedLocationReviewsLoading] = useState(false);
   const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<LocationCategory[]>([]);
@@ -212,6 +230,59 @@ export function HomePage() {
     };
   }, [telegramInitData, viewportBounds]);
 
+  useEffect(() => {
+    if (!selectedLocation) {
+      setSelectedLocationPhotos([]);
+      setSelectedLocationReviews([]);
+      return;
+    }
+    let isActive = true;
+    setIsSelectedLocationPhotosLoading(true);
+    setIsSelectedLocationReviewsLoading(true);
+    void fetchLocationPhotos(selectedLocation.id, telegramInitData)
+      .then((data) => {
+        if (isActive) {
+          setSelectedLocationPhotos(data);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsSelectedLocationPhotosLoading(false);
+        }
+      });
+    void fetchLocationReviews(selectedLocation.id, telegramInitData)
+      .then((data) => {
+        if (isActive) {
+          setSelectedLocationReviews(data);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsSelectedLocationReviewsLoading(false);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [selectedLocation, telegramInitData]);
+
+  const handleUploadLocationPhoto = async (file: File) => {
+    if (!selectedLocation) {
+      return;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    const created = await uploadLocationPhoto(selectedLocation.id, dataUrl, telegramInitData);
+    setSelectedLocationPhotos((prev) => [created, ...prev]);
+  };
+
+  const handleCreateLocationReview = async (rating: number, text: string | null) => {
+    if (!selectedLocation) {
+      return;
+    }
+    const created = await createLocationReview(selectedLocation.id, rating, text, telegramInitData);
+    setSelectedLocationReviews((prev) => [created, ...prev]);
+  };
+
   const handleLocateMe = () => {
     if (!navigator.geolocation) { setError("Geolocation is not available on this device."); return; }
     navigator.geolocation.getCurrentPosition(
@@ -257,40 +328,18 @@ export function HomePage() {
         onLocateMe={handleLocateMe}
       />
 
-      {/* Selected location card */}
-      {selectedLocation && (
-        <div className="location-card" role="region" aria-label="Selected location">
-          <div className="location-card__header">
-            <h2 className="location-card__name">{selectedLocation.name}</h2>
-            <span className="location-card__badge">{selectedLocation.category}</span>
-            <button
-              type="button"
-              className="location-card__close"
-              onClick={() => setSelectedLocation(null)}
-              aria-label="Dismiss"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          {selectedLocation.description && (
-            <p className="location-card__desc">{selectedLocation.description}</p>
-          )}
-          <p className="location-card__coords">
-            {selectedLocation.latitude.toFixed(5)}, {selectedLocation.longitude.toFixed(5)}
-          </p>
-          {selectedLocation.website_url && (
-            <a
-              className="location-card__link"
-              href={selectedLocation.website_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={12} />
-              Visit website
-            </a>
-          )}
-        </div>
-      )}
+      <LocationDetailSheet
+        isOpen={Boolean(selectedLocation)}
+        location={selectedLocation}
+        photos={selectedLocationPhotos}
+        reviews={selectedLocationReviews}
+        photosLoading={isSelectedLocationPhotosLoading}
+        reviewsLoading={isSelectedLocationReviewsLoading}
+        canContribute={Boolean(telegramUser && userProfile)}
+        onClose={() => setSelectedLocation(null)}
+        onUploadPhoto={handleUploadLocationPhoto}
+        onCreateReview={handleCreateLocationReview}
+      />
 
       {/* Error toast */}
       {error && (
@@ -360,6 +409,21 @@ export function HomePage() {
       )}
     </main>
   );
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Failed to read image file"));
+    };
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function isNicknameConfigured(nickname: string | null | undefined): boolean {
