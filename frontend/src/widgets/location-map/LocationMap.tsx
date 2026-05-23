@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection, Point } from "geojson";
+import type { StyleSpecification } from "maplibre-gl";
 import type { Location } from "../../entities/location/model/types";
 
 type MapProps = {
@@ -21,6 +22,25 @@ const SOURCE_ID = "saved-locations";
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
 const POINT_LAYER_ID = "unclustered";
+const FALLBACK_MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    {
+      id: "osm",
+      type: "raster",
+      source: "osm",
+    },
+  ],
+};
 
 function toGeoJson(locations: Location[]): FeatureCollection<Point> {
   return {
@@ -124,7 +144,7 @@ export function LocationMap({
         longitude: initialCenter.longitude,
         zoom: 12,
       }}
-      mapStyle="https://tiles.openfreemap.org/styles/liberty"
+      mapStyle={FALLBACK_MAP_STYLE}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID]}
       onLoad={emitViewportBounds}
