@@ -1,4 +1,9 @@
-import type { CreateLocationPayload, Location } from "../model/types";
+import type {
+  CreateLocationPayload,
+  Location,
+  LocationPhoto,
+  LocationReview,
+} from "../model/types";
 import { httpJson } from "../../../shared/api/http";
 
 type ApiLocation = Partial<Location> & {
@@ -88,5 +93,44 @@ export async function createLocation(
     method: "POST",
     telegramInitData,
     body: payload,
+  });
+}
+
+export async function fetchLocationPhotos(
+  locationId: number,
+  telegramInitData: string | null
+): Promise<LocationPhoto[]> {
+  return httpJson<LocationPhoto[]>(`/api/locations/${locationId}/photos`, { telegramInitData });
+}
+
+export async function fetchLocationReviews(
+  locationId: number,
+  telegramInitData: string | null
+): Promise<LocationReview[]> {
+  return httpJson<LocationReview[]>(`/api/locations/${locationId}/reviews`, { telegramInitData });
+}
+
+export async function uploadLocationPhoto(
+  locationId: number,
+  dataUrl: string,
+  telegramInitData: string | null
+): Promise<LocationPhoto> {
+  return httpJson<LocationPhoto>(`/api/locations/${locationId}/photos`, {
+    method: "POST",
+    telegramInitData,
+    body: { dataUrl },
+  });
+}
+
+export async function createLocationReview(
+  locationId: number,
+  rating: number,
+  text: string | null,
+  telegramInitData: string | null
+): Promise<LocationReview> {
+  return httpJson<LocationReview>(`/api/locations/${locationId}/reviews`, {
+    method: "POST",
+    telegramInitData,
+    body: { rating, text },
   });
 }
