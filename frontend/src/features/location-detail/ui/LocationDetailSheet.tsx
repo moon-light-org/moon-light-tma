@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import { Star, X } from "lucide-react";
+import { ImagePlus, Star, X } from "lucide-react";
 import type { Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 
 type TabKey = "description" | "photos" | "reviews";
@@ -33,6 +33,7 @@ export function LocationDetailSheet({
 }: LocationDetailSheetProps) {
   const [tab, setTab] = useState<TabKey>("description");
   const [rating, setRating] = useState(5);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [busy, setBusy] = useState<"photo" | "review" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,27 @@ export function LocationDetailSheet({
     const total = reviews.reduce((sum, r) => sum + r.rating, 0);
     return (total / reviews.length).toFixed(1);
   }, [reviews]);
+  const orderedPhotos = useMemo(() => {
+    const list = [...photos];
+    if (location?.image_url) {
+      const alreadyPresent = list.some((p) => p.image_url === location.image_url);
+      if (!alreadyPresent) {
+        list.unshift({
+          id: -location.id,
+          location_id: location.id,
+          user_id: location.user_id,
+          image_url: location.image_url,
+          caption: null,
+          mime_type: null,
+          size_bytes: null,
+          created_at: location.created_at,
+        });
+      }
+    }
+    return list;
+  }, [photos, location]);
+  const heroPhoto = orderedPhotos[0]?.image_url ?? null;
+  const activeGalleryPhoto = orderedPhotos[selectedPhotoIndex]?.image_url ?? null;
 
   if (!isOpen || !location) {
     return null;
@@ -105,6 +127,9 @@ export function LocationDetailSheet({
     <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Location details">
       <div className="bottom-sheet location-detail-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
+        <div className="location-detail-hero">
+          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__fallback">No image</div>}
+        </div>
         <div className="sheet-header">
           <h3>{location.name}</h3>
           <button type="button" className="sheet-close" onClick={onClose} aria-label="Close">
@@ -144,18 +169,24 @@ export function LocationDetailSheet({
           {tab === "photos" ? (
             <div>
               <div className="location-detail-toolbar">
-                <button type="button" className="btn-primary" disabled={!canContribute || busy !== null} onClick={handlePickFile}>
+                <button type="button" className="btn-secondary" disabled={!canContribute || busy !== null} onClick={handlePickFile}>
+                  <ImagePlus size={15} />
                   {busy === "photo" ? "Uploading..." : "Add photo"}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={handlePhotoChange} />
               </div>
               {photosLoading ? <p>Loading photos...</p> : null}
-              {!photosLoading && photos.length === 0 ? <p>No photos yet.</p> : null}
-              <div className="location-photo-grid">
-                {photos.map((photo) => (
-                  <a key={photo.id} href={photo.image_url} target="_blank" rel="noreferrer">
-                    <img src={photo.image_url} alt="Location upload" loading="lazy" />
-                  </a>
+              {!photosLoading && orderedPhotos.length === 0 ? <p>No photos yet.</p> : null}
+              {activeGalleryPhoto ? (
+                <div className="location-gallery-main">
+                  <img src={activeGalleryPhoto} alt="Location gallery" loading="lazy" />
+                </div>
+              ) : null}
+              <div className="location-gallery-strip">
+                {orderedPhotos.map((photo, index) => (
+                  <button key={photo.id} type="button" className={index === selectedPhotoIndex ? "active" : ""} onClick={() => setSelectedPhotoIndex(index)}>
+                    <img src={photo.image_url} alt="Location thumbnail" loading="lazy" />
+                  </button>
                 ))}
               </div>
             </div>

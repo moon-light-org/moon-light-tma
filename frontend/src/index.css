@@ -495,6 +495,31 @@ body {
 .location-detail-sheet {
   min-height: 85vh;
   max-height: 85vh;
+  background: #f7f8fa;
+}
+
+.location-detail-hero {
+  margin: 12px 14px 2px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(140deg, #e7ebf1, #f6f9fc);
+  height: 196px;
+}
+
+.location-detail-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.location-detail-hero__fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 .location-detail-rating {
@@ -528,6 +553,10 @@ body {
 
 .location-detail-body {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  margin-top: 6px;
+  padding-top: 12px;
 }
 
 .location-detail-toolbar {
@@ -538,22 +567,45 @@ body {
   margin-bottom: 12px;
 }
 
-.location-photo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.location-photo-grid a {
-  display: block;
+.location-gallery-main {
   border-radius: 12px;
   overflow: hidden;
-  background: var(--c-surface2);
+  height: 220px;
+  background: #f2f4f7;
 }
 
-.location-photo-grid img {
+.location-gallery-main img {
   width: 100%;
-  height: 140px;
+  height: 100%;
+  object-fit: cover;
+}
+
+.location-gallery-strip {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.location-gallery-strip button {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  width: 76px;
+  height: 66px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.location-gallery-strip button.active {
+  border-color: #1a73e8;
+}
+
+.location-gallery-strip img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
