@@ -99,6 +99,14 @@ export function HomePage() {
     maxLat: number;
     maxLon: number;
   } | null>(null);
+  const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
+
+  const telegramUserKey = useMemo(() => {
+    if (!telegramUser) {
+      return "anon";
+    }
+    return `${telegramUser.id}:${telegramUser.username ?? ""}:${telegramUser.first_name ?? ""}:${telegramUser.photo_url ?? ""}`;
+  }, [telegramUser]);
 
   useEffect(() => {
     let isActive = true;
@@ -154,7 +162,7 @@ export function HomePage() {
     }
     void bootstrap();
     return () => { isActive = false; };
-  }, [telegramInitData, telegramUser]);
+  }, [telegramInitData, telegramUserKey]);
 
   const profileInitial = useMemo(() => {
     const fromProfile = userProfile?.nickname?.trim();
@@ -237,6 +245,15 @@ export function HomePage() {
     if (!viewportBounds) {
       return;
     }
+    const roundedKey = [
+      viewportBounds.minLat.toFixed(4),
+      viewportBounds.minLon.toFixed(4),
+      viewportBounds.maxLat.toFixed(4),
+      viewportBounds.maxLon.toFixed(4),
+    ].join(":");
+    if (roundedKey === lastFetchedBoundsKey) {
+      return;
+    }
 
     let isActive = true;
 
@@ -245,6 +262,7 @@ export function HomePage() {
         const loaded = await fetchLocations(telegramInitData, viewportBounds);
         if (isActive) {
           setLocations(loaded);
+          setLastFetchedBoundsKey(roundedKey);
         }
       } catch (err) {
         if (isActive) {
@@ -257,7 +275,7 @@ export function HomePage() {
       isActive = false;
       window.clearTimeout(timer);
     };
-  }, [telegramInitData, viewportBounds]);
+  }, [lastFetchedBoundsKey, telegramInitData, viewportBounds]);
 
   useEffect(() => {
     if (!selectedLocation) {

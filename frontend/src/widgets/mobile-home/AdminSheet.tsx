@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, Trash2, UserCog, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Shield, Trash2, UserCog, X } from "lucide-react";
 import type { Location, LocationReview } from "../../entities/location/model/types";
 import type { UserProfile } from "../../entities/user/model/types";
 
@@ -120,15 +120,21 @@ export function AdminSheet({
                           <strong>{location.name}</strong>
                           <p>{location.category}</p>
                         </div>
+                        <ChevronRight size={16} className="admin-item__chevron" />
                       </button>
                       <button
                         type="button"
-                        className="btn-danger"
+                        className="btn-icon-danger"
+                        aria-label={`Delete location ${location.name}`}
+                        title="Delete location"
                         onClick={() => onDeleteLocation(location)}
                         disabled={deletingLocationId === location.id}
                       >
-                        <Trash2 size={14} />
-                        {deletingLocationId === location.id ? "Deleting..." : "Delete"}
+                        {deletingLocationId === location.id ? (
+                          <Loader2 size={16} className="spin" />
+                        ) : (
+                          <Trash2 size={16} />
+                        )}
                       </button>
                     </article>
                   ))}
@@ -136,18 +142,24 @@ export function AdminSheet({
               ) : (
                 <div>
                   <div className="admin-location-head">
-                    <button type="button" className="btn-secondary" onClick={onBackToLocations}>
+                    <button type="button" className="btn-back" onClick={onBackToLocations}>
+                      <ChevronLeft size={16} />
                       Back
                     </button>
                     <strong>{selectedLocation.name}</strong>
                     <button
                       type="button"
-                      className="btn-danger"
+                      className="btn-icon-danger"
+                      aria-label={`Delete location ${selectedLocation.name}`}
+                      title="Delete location"
                       onClick={() => onDeleteLocation(selectedLocation)}
                       disabled={deletingLocationId === selectedLocation.id}
                     >
-                      <Trash2 size={14} />
-                      {deletingLocationId === selectedLocation.id ? "Deleting..." : "Delete location"}
+                      {deletingLocationId === selectedLocation.id ? (
+                        <Loader2 size={16} className="spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
                     </button>
                   </div>
                   {loadingReviews ? <p>Loading reviews...</p> : null}
@@ -159,12 +171,17 @@ export function AdminSheet({
                           <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
                           <button
                             type="button"
-                            className="btn-danger btn-danger--small"
+                            className="btn-icon-danger btn-icon-danger--small"
+                            aria-label="Delete review"
+                            title="Delete review"
                             onClick={() => onDeleteReview(review)}
                             disabled={deletingReviewId === review.id}
                           >
-                            <Trash2 size={13} />
-                            {deletingReviewId === review.id ? "Deleting..." : "Delete"}
+                            {deletingReviewId === review.id ? (
+                              <Loader2 size={14} className="spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
                           </button>
                         </div>
                         {review.text ? <p>{review.text}</p> : <p className="muted">No text review</p>}
