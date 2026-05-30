@@ -34,3 +34,21 @@ export async function getOrCreateUser(
     nickname: null,
   });
 }
+
+export async function fetchAdminMembers(telegramInitData: string | null): Promise<UserProfile[]> {
+  return httpJson<UserProfile[]>("/api/admin/members", {
+    telegramInitData,
+  });
+}
+
+export async function updateAdminMemberRole(
+  userId: number,
+  role: "admin" | "user",
+  telegramInitData: string | null
+): Promise<UserProfile> {
+  return httpJson<UserProfile>(`/api/admin/members/${userId}/role`, {
+    method: "PATCH",
+    telegramInitData,
+    body: { role },
+  });
+}

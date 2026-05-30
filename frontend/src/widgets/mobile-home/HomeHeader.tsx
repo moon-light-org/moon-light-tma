@@ -1,4 +1,4 @@
-import { Search, MapPin, ShoppingBag, Utensils, Grid2x2 } from "lucide-react";
+import { Search, MapPin, ShoppingBag, Utensils, Grid2x2, Shield } from "lucide-react";
 import type { LocationCategory } from "../../entities/location/model/types";
 
 type HomeHeaderProps = {
@@ -7,6 +7,8 @@ type HomeHeaderProps = {
   onSearchClick: () => void;
   profileInitial: string;
   onProfileClick: () => void;
+  isAdmin: boolean;
+  onAdminClick: () => void;
 };
 
 const categories: Array<{
@@ -26,6 +28,8 @@ export function HomeHeader({
   onSearchClick,
   profileInitial,
   onProfileClick,
+  isAdmin,
+  onAdminClick,
 }: HomeHeaderProps) {
   const isSelected = (category: LocationCategory | "all") => {
     if (category === "all") return selectedCategories.length === 0;
@@ -36,27 +40,21 @@ export function HomeHeader({
     <>
       {/* Search bar */}
       <div className="top-bar">
-        <button className="search-bar" type="button" onClick={onSearchClick} aria-label="Search Bitcoin-friendly spots">
-          <span className="search-bar__icon">
-            <Search size={16} />
-          </span>
-          <span className="search-bar__text">Search BTC places…</span>
+        <div className="search-bar">
+          <button className="search-bar__trigger" type="button" onClick={onSearchClick} aria-label="Search Bitcoin-friendly spots">
+            <span className="search-bar__icon">
+              <Search size={16} />
+            </span>
+            <span className="search-bar__text">Search BTC places…</span>
+          </button>
           <span className="search-bar__avatar-wrap">
-            <button
-              className="search-bar__avatar-btn"
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onProfileClick();
-              }}
-              aria-label="Open profile"
-            >
+            <button className="search-bar__avatar-btn" type="button" onClick={onProfileClick} aria-label="Open profile">
               <span className="search-bar__avatar" aria-hidden="true">
                 {profileInitial}
               </span>
             </button>
           </span>
-        </button>
+        </div>
       </div>
 
       {/* Category filter chips */}
@@ -73,6 +71,17 @@ export function HomeHeader({
             <span>{label}</span>
           </button>
         ))}
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={onAdminClick}
+            className="filter-chip filter-chip--admin"
+            aria-label="Open admin panel"
+          >
+            <Shield size={14} />
+            <span>Admin</span>
+          </button>
+        ) : null}
       </nav>
     </>
   );

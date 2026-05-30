@@ -134,3 +134,37 @@ export async function createLocationReview(
     body: { rating, text },
   });
 }
+
+export async function fetchAdminLocations(
+  telegramInitData: string | null
+): Promise<Location[]> {
+  const response = await httpJson<ApiLocation[]>("/api/admin/locations", { telegramInitData });
+  return response.map(normalizeLocation).filter((location): location is Location => location !== null);
+}
+
+export async function fetchAdminLocationReviews(
+  locationId: number,
+  telegramInitData: string | null
+): Promise<LocationReview[]> {
+  return httpJson<LocationReview[]>(`/api/admin/locations/${locationId}/reviews`, { telegramInitData });
+}
+
+export async function deleteAdminLocation(
+  locationId: number,
+  telegramInitData: string | null
+): Promise<void> {
+  await httpJson<void>(`/api/admin/locations/${locationId}`, {
+    method: "DELETE",
+    telegramInitData,
+  });
+}
+
+export async function deleteAdminReview(
+  reviewId: number,
+  telegramInitData: string | null
+): Promise<void> {
+  await httpJson<void>(`/api/admin/reviews/${reviewId}`, {
+    method: "DELETE",
+    telegramInitData,
+  });
+}

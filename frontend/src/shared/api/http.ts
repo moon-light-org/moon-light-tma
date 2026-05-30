@@ -1,7 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
 type FetchOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   telegramInitData?: string | null;
 };
@@ -33,6 +33,10 @@ export async function httpJson<T>(path: string, options: FetchOptions = {}): Pro
       // no-op
     }
     throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return (await response.json()) as T;

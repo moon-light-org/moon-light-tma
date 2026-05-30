@@ -7,6 +7,10 @@ import {
   fetchLocationPhotos,
   fetchLocationReviews,
   uploadLocationPhoto,
+  fetchAdminLocations,
+  fetchAdminLocationReviews,
+  deleteAdminLocation,
+  deleteAdminReview,
 } from "../../entities/location/api/locationApi";
 import type {
   CreateLocationPayload,
@@ -15,7 +19,12 @@ import type {
   LocationPhoto,
   LocationReview,
 } from "../../entities/location/model/types";
-import { getOrCreateUser, upsertUserProfile } from "../../entities/user/api/userApi";
+import {
+  fetchAdminMembers,
+  getOrCreateUser,
+  updateAdminMemberRole,
+  upsertUserProfile,
+} from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
@@ -27,6 +36,7 @@ import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
+import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
 
 /** When VITE_USE_DEV_FALLBACK_USER=true we skip backend calls entirely. */
 const IS_DEV_FALLBACK =
@@ -66,6 +76,18 @@ export function HomePage() {
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
   const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
   const [error,              setError]              = useState<string | null>(null);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [adminMembers, setAdminMembers] = useState<UserProfile[]>([]);
+  const [adminLocations, setAdminLocations] = useState<Location[]>([]);
+  const [adminSelectedLocation, setAdminSelectedLocation] = useState<Location | null>(null);
+  const [adminLocationReviews, setAdminLocationReviews] = useState<LocationReview[]>([]);
+  const [adminLoadingMembers, setAdminLoadingMembers] = useState(false);
+  const [adminLoadingLocations, setAdminLoadingLocations] = useState(false);
+  const [adminLoadingReviews, setAdminLoadingReviews] = useState(false);
+  const [adminBusyUserId, setAdminBusyUserId] = useState<number | null>(null);
+  const [adminDeletingLocationId, setAdminDeletingLocationId] = useState<number | null>(null);
+  const [adminDeletingReviewId, setAdminDeletingReviewId] = useState<number | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [viewportBounds,     setViewportBounds]     = useState<{
     minLat: number;
     minLon: number;
@@ -291,6 +313,105 @@ export function HomePage() {
     );
   };
 
+  const openAdminPanel = async () => {
+    setIsAdminOpen(true);
+    setAdminError(null);
+    setAdminLoadingMembers(true);
+    setAdminLoadingLocations(true);
+    try {
+      const [members, locationsData] = await Promise.all([
+        fetchAdminMembers(telegramInitData),
+        fetchAdminLocations(telegramInitData),
+      ]);
+      setAdminMembers(members);
+      setAdminLocations(locationsData);
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Failed to load admin data");
+    } finally {
+      setAdminLoadingMembers(false);
+      setAdminLoadingLocations(false);
+    }
+  };
+
+  const handleSelectAdminLocation = async (location: Location) => {
+    setAdminSelectedLocation(location);
+    setAdminLoadingReviews(true);
+    setAdminError(null);
+    try {
+      const reviews = await fetchAdminLocationReviews(location.id, telegramInitData);
+      setAdminLocationReviews(reviews);
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Failed to load location reviews");
+      setAdminLocationReviews([]);
+    } finally {
+      setAdminLoadingReviews(false);
+    }
+  };
+
+  const handleToggleAdminRole = async (member: UserProfile) => {
+    const nextRole: "admin" | "user" = member.role === "admin" ? "user" : "admin";
+    const prevMembers = adminMembers;
+    setAdminBusyUserId(member.id);
+    setAdminError(null);
+    setAdminMembers((current) =>
+      current.map((user) => (user.id === member.id ? { ...user, role: nextRole } : user))
+    );
+    try {
+      const updated = await updateAdminMemberRole(member.id, nextRole, telegramInitData);
+      setAdminMembers((current) => current.map((user) => (user.id === updated.id ? updated : user)));
+      if (userProfile?.id === updated.id) {
+        setUserProfile((current) => (current ? { ...current, role: updated.role } : current));
+      }
+    } catch (err) {
+      setAdminMembers(prevMembers);
+      setAdminError(err instanceof Error ? err.message : "Failed to update role");
+    } finally {
+      setAdminBusyUserId(null);
+    }
+  };
+
+  const handleDeleteAdminLocation = async (location: Location) => {
+    if (!window.confirm("Delete this location permanently? This will also delete related reviews and photos.")) {
+      return;
+    }
+    setAdminDeletingLocationId(location.id);
+    setAdminError(null);
+    try {
+      await deleteAdminLocation(location.id, telegramInitData);
+      setAdminLocations((current) => current.filter((item) => item.id !== location.id));
+      setLocations((current) => current.filter((item) => item.id !== location.id));
+      if (adminSelectedLocation?.id === location.id) {
+        setAdminSelectedLocation(null);
+        setAdminLocationReviews([]);
+      }
+      if (selectedLocation?.id === location.id) {
+        setSelectedLocation(null);
+        setSelectedLocationReviews([]);
+      }
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Failed to delete location");
+    } finally {
+      setAdminDeletingLocationId(null);
+    }
+  };
+
+  const handleDeleteAdminReview = async (review: LocationReview) => {
+    if (!window.confirm("Delete this review permanently?")) {
+      return;
+    }
+    setAdminDeletingReviewId(review.id);
+    setAdminError(null);
+    try {
+      await deleteAdminReview(review.id, telegramInitData);
+      setAdminLocationReviews((current) => current.filter((item) => item.id !== review.id));
+      setSelectedLocationReviews((current) => current.filter((item) => item.id !== review.id));
+    } catch (err) {
+      setAdminError(err instanceof Error ? err.message : "Failed to delete review");
+    } finally {
+      setAdminDeletingReviewId(null);
+    }
+  };
+
   /* ── Loading ────────────────────────────────────────── */
   if (isLoading) {
     return (
@@ -320,6 +441,10 @@ export function HomePage() {
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
         onProfileClick={() => setIsProfileOpen(true)}
+        isAdmin={userProfile?.role === "admin"}
+        onAdminClick={() => {
+          void openAdminPanel();
+        }}
       />
 
       {/* Floating action buttons */}
@@ -368,6 +493,42 @@ export function HomePage() {
         userProfile={userProfile}
         placesAddedCount={placesAddedCount}
         onClose={() => setIsProfileOpen(false)}
+      />
+
+      <AdminSheet
+        isOpen={isAdminOpen}
+        members={adminMembers}
+        locations={adminLocations}
+        selectedLocation={adminSelectedLocation}
+        selectedLocationReviews={adminLocationReviews}
+        loadingMembers={adminLoadingMembers}
+        loadingLocations={adminLoadingLocations}
+        loadingReviews={adminLoadingReviews}
+        busyUserId={adminBusyUserId}
+        deletingLocationId={adminDeletingLocationId}
+        deletingReviewId={adminDeletingReviewId}
+        error={adminError}
+        onClose={() => {
+          setIsAdminOpen(false);
+          setAdminSelectedLocation(null);
+          setAdminLocationReviews([]);
+        }}
+        onSelectLocation={(location) => {
+          void handleSelectAdminLocation(location);
+        }}
+        onBackToLocations={() => {
+          setAdminSelectedLocation(null);
+          setAdminLocationReviews([]);
+        }}
+        onToggleMemberRole={(member) => {
+          void handleToggleAdminRole(member);
+        }}
+        onDeleteLocation={(location) => {
+          void handleDeleteAdminLocation(location);
+        }}
+        onDeleteReview={(review) => {
+          void handleDeleteAdminReview(review);
+        }}
       />
 
       {/* Tap to add – prompt sheet */}
