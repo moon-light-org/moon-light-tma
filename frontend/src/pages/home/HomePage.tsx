@@ -41,13 +41,16 @@ import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
 /** When VITE_USE_DEV_FALLBACK_USER=true we skip backend calls entirely. */
 const IS_DEV_FALLBACK =
   import.meta.env.DEV && import.meta.env.VITE_USE_DEV_FALLBACK_USER === "true";
+const DEV_FALLBACK_ROLE = String(import.meta.env.VITE_DEV_FALLBACK_ROLE ?? "user").toLowerCase() === "admin"
+  ? "admin"
+  : "user";
 
 const DEV_STUB_PROFILE: UserProfile = {
   id: 1,
   telegram_id: "123456789",
   nickname: "local_user",
   avatar_url: null,
-  role: "user",
+  role: DEV_FALLBACK_ROLE,
   created_at: new Date().toISOString(),
 };
 
@@ -75,6 +78,8 @@ export function HomePage() {
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
   const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
+  const [isProfileNicknameSaving, setIsProfileNicknameSaving] = useState(false);
+  const [profileNicknameError, setProfileNicknameError] = useState<string | null>(null);
   const [error,              setError]              = useState<string | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminMembers, setAdminMembers] = useState<UserProfile[]>([]);
@@ -169,6 +174,8 @@ export function HomePage() {
     }
     return locations.filter((location) => location.user_id === userProfile.id).length;
   }, [locations, userProfile]);
+
+  const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
 
   const submitOnboardingNickname = async (nickname: string) => {
     if (!telegramUser) {
@@ -313,6 +320,27 @@ export function HomePage() {
     );
   };
 
+  const submitProfileNickname = async (nickname: string) => {
+    if (!telegramUser) {
+      return;
+    }
+    setIsProfileNicknameSaving(true);
+    setProfileNicknameError(null);
+    try {
+      const updatedProfile = await upsertUserProfile({
+        telegramUser,
+        telegramInitData,
+        nickname,
+      });
+      setUserProfile(updatedProfile);
+    } catch (err) {
+      setProfileNicknameError(err instanceof Error ? err.message : "Failed to save nickname");
+      throw err;
+    } finally {
+      setIsProfileNicknameSaving(false);
+    }
+  };
+
   const openAdminPanel = async () => {
     setIsAdminOpen(true);
     setAdminError(null);
@@ -440,8 +468,11 @@ export function HomePage() {
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
-        onProfileClick={() => setIsProfileOpen(true)}
-        isAdmin={userProfile?.role === "admin"}
+        onProfileClick={() => {
+          setProfileNicknameError(null);
+          setIsProfileOpen(true);
+        }}
+        isAdmin={isAdminUser}
         onAdminClick={() => {
           void openAdminPanel();
         }}
@@ -492,6 +523,9 @@ export function HomePage() {
         telegramUser={telegramUser}
         userProfile={userProfile}
         placesAddedCount={placesAddedCount}
+        isSavingNickname={isProfileNicknameSaving}
+        nicknameError={profileNicknameError}
+        onSaveNickname={submitProfileNickname}
         onClose={() => setIsProfileOpen(false)}
       />
 

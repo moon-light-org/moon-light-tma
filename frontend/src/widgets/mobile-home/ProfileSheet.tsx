@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { X, CalendarDays, MapPin } from "lucide-react";
 import type { TelegramUser, UserProfile } from "../../entities/user/model/types";
 
@@ -7,6 +8,9 @@ type ProfileSheetProps = {
   telegramUser: TelegramUser | null;
   userProfile: UserProfile | null;
   placesAddedCount: number;
+  isSavingNickname: boolean;
+  nicknameError: string | null;
+  onSaveNickname: (nickname: string) => Promise<void>;
   onClose: () => void;
 };
 
@@ -16,8 +20,19 @@ export function ProfileSheet({
   telegramUser,
   userProfile,
   placesAddedCount,
+  isSavingNickname,
+  nicknameError,
+  onSaveNickname,
   onClose,
 }: ProfileSheetProps) {
+  const [nicknameInput, setNicknameInput] = useState(userProfile?.nickname ?? "");
+
+  useEffect(() => {
+    if (isOpen) {
+      setNicknameInput(userProfile?.nickname ?? "");
+    }
+  }, [isOpen, userProfile?.nickname]);
+
   if (!isOpen) {
     return null;
   }
@@ -25,6 +40,10 @@ export function ProfileSheet({
   const displayName = userProfile?.nickname?.trim() || telegramUser?.first_name?.trim() || "Telegram User";
   const username = telegramUser?.username?.trim() ? `@${telegramUser.username.trim()}` : null;
   const joinedDate = formatJoinedDate(userProfile?.created_at);
+
+  const handleSave = async () => {
+    await onSaveNickname(nicknameInput);
+  };
 
   return (
     <div className="sheet-backdrop" role="presentation" onClick={onClose}>
@@ -74,6 +93,22 @@ export function ProfileSheet({
                 <strong className="profile-stat__value">{placesAddedCount}</strong>
               </div>
             </div>
+          </div>
+
+          <div className="profile-sheet__edit">
+            <label className="form-label" htmlFor="profile-nickname">Nickname</label>
+            <input
+              id="profile-nickname"
+              className="onboarding-input"
+              value={nicknameInput}
+              onChange={(event) => setNicknameInput(event.target.value)}
+              maxLength={32}
+              placeholder="Enter nickname"
+            />
+            {nicknameError ? <p className="onboarding-error">{nicknameError}</p> : null}
+            <button type="button" className="btn-primary onboarding-submit" onClick={handleSave} disabled={isSavingNickname}>
+              {isSavingNickname ? "Saving..." : "Save nickname"}
+            </button>
           </div>
         </div>
       </section>
