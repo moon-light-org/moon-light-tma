@@ -477,7 +477,7 @@ export function HomePage() {
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
-        profileAvatarUrl={userProfile?.avatar_url}
+        profileAvatarUrl={userProfile?.avatar_url ?? telegramUser?.photo_url ?? null}
         onProfileClick={() => {
           setProfileError(null);
           setIsProfileOpen(true);

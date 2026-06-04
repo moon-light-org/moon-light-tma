@@ -110,18 +110,6 @@ export async function fetchLocationReviews(
   return httpJson<LocationReview[]>(`/api/locations/${locationId}/reviews`, { telegramInitData });
 }
 
-export async function uploadLocationPhoto(
-  locationId: number,
-  dataUrl: string,
-  telegramInitData: string | null
-): Promise<LocationPhoto> {
-  return httpJson<LocationPhoto>(`/api/locations/${locationId}/photos`, {
-    method: "POST",
-    telegramInitData,
-    body: { dataUrl },
-  });
-}
-
 export async function createLocationReview(
   locationId: number,
   rating: number,
