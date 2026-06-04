@@ -130,6 +130,14 @@ body {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+  overflow: hidden;
+}
+
+.search-bar__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .search-bar__avatar-wrap {
@@ -968,6 +976,14 @@ code {
   padding: 10px 0 14px;
 }
 
+.profile-sheet__avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .profile-sheet__avatar {
   width: 48px;
   height: 48px;
@@ -981,6 +997,32 @@ code {
   font-weight: 700;
   text-transform: uppercase;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-sheet__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-sheet__avatar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--c-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-sheet__avatar-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .profile-sheet__identity h4 {

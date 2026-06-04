@@ -6,7 +6,6 @@ import {
   createLocationReview,
   fetchLocationPhotos,
   fetchLocationReviews,
-  uploadLocationPhoto,
   fetchAdminLocations,
   fetchAdminLocationReviews,
   deleteAdminLocation,
@@ -78,8 +77,8 @@ export function HomePage() {
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
   const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
-  const [isProfileNicknameSaving, setIsProfileNicknameSaving] = useState(false);
-  const [profileNicknameError, setProfileNicknameError] = useState<string | null>(null);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [error,              setError]              = useState<string | null>(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminMembers, setAdminMembers] = useState<UserProfile[]>([]);
@@ -313,15 +312,6 @@ export function HomePage() {
     };
   }, [selectedLocation, telegramInitData]);
 
-  const handleUploadLocationPhoto = async (file: File) => {
-    if (!selectedLocation) {
-      return;
-    }
-    const dataUrl = await fileToDataUrl(file);
-    const created = await uploadLocationPhoto(selectedLocation.id, dataUrl, telegramInitData);
-    setSelectedLocationPhotos((prev) => [created, ...prev]);
-  };
-
   const handleCreateLocationReview = async (rating: number, text: string | null) => {
     if (!selectedLocation) {
       return;
@@ -338,24 +328,25 @@ export function HomePage() {
     );
   };
 
-  const submitProfileNickname = async (nickname: string) => {
+  const submitProfile = async (nickname: string, avatarUrl?: string | null) => {
     if (!telegramUser) {
       return;
     }
-    setIsProfileNicknameSaving(true);
-    setProfileNicknameError(null);
+    setIsProfileSaving(true);
+    setProfileError(null);
     try {
       const updatedProfile = await upsertUserProfile({
         telegramUser,
         telegramInitData,
         nickname,
+        avatarUrl,
       });
       setUserProfile(updatedProfile);
     } catch (err) {
-      setProfileNicknameError(err instanceof Error ? err.message : "Failed to save nickname");
+      setProfileError(err instanceof Error ? err.message : "Failed to save profile");
       throw err;
     } finally {
-      setIsProfileNicknameSaving(false);
+      setIsProfileSaving(false);
     }
   };
 
@@ -486,8 +477,9 @@ export function HomePage() {
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
+        profileAvatarUrl={userProfile?.avatar_url}
         onProfileClick={() => {
-          setProfileNicknameError(null);
+          setProfileError(null);
           setIsProfileOpen(true);
         }}
         isAdmin={isAdminUser}
@@ -511,7 +503,6 @@ export function HomePage() {
         reviewsLoading={isSelectedLocationReviewsLoading}
         canContribute={Boolean(telegramUser && userProfile)}
         onClose={() => setSelectedLocation(null)}
-        onUploadPhoto={handleUploadLocationPhoto}
         onCreateReview={handleCreateLocationReview}
       />
 
@@ -541,9 +532,9 @@ export function HomePage() {
         telegramUser={telegramUser}
         userProfile={userProfile}
         placesAddedCount={placesAddedCount}
-        isSavingNickname={isProfileNicknameSaving}
-        nicknameError={profileNicknameError}
-        onSaveNickname={submitProfileNickname}
+        isSavingProfile={isProfileSaving}
+        profileError={profileError}
+        onSaveProfile={submitProfile}
         onClose={() => setIsProfileOpen(false)}
       />
 
@@ -622,21 +613,6 @@ export function HomePage() {
       )}
     </main>
   );
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("Failed to read image file"));
-    };
-    reader.onerror = () => reject(new Error("Failed to read image file"));
-    reader.readAsDataURL(file);
-  });
 }
 
 function isNicknameConfigured(nickname: string | null | undefined): boolean {

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
-import { ImagePlus, Star, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Star, X } from "lucide-react";
 import type { Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 
 type TabKey = "description" | "photos" | "reviews";
@@ -13,11 +13,8 @@ type LocationDetailSheetProps = {
   reviewsLoading: boolean;
   canContribute: boolean;
   onClose: () => void;
-  onUploadPhoto: (file: File) => Promise<void>;
   onCreateReview: (rating: number, text: string | null) => Promise<void>;
 };
-
-const MAX_IMAGE_BYTES = 1024 * 1024;
 
 export function LocationDetailSheet({
   isOpen,
@@ -28,16 +25,14 @@ export function LocationDetailSheet({
   reviewsLoading,
   canContribute,
   onClose,
-  onUploadPhoto,
   onCreateReview,
 }: LocationDetailSheetProps) {
   const [tab, setTab] = useState<TabKey>("description");
   const [rating, setRating] = useState(5);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [reviewText, setReviewText] = useState("");
-  const [busy, setBusy] = useState<"photo" | "review" | null>(null);
+  const [busy, setBusy] = useState<"review" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const avgRating = useMemo(() => {
     if (!reviews.length) {
@@ -71,38 +66,6 @@ export function LocationDetailSheet({
   if (!isOpen || !location) {
     return null;
   }
-
-  const handlePickFile = () => {
-    if (!canContribute || busy) {
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      setError("Only image files are allowed.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError("Image must be 1MB or smaller.");
-      return;
-    }
-    try {
-      setError(null);
-      setBusy("photo");
-      await onUploadPhoto(file);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload photo");
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const handleSubmitReview = async () => {
     const normalized = reviewText.trim();
@@ -168,13 +131,6 @@ export function LocationDetailSheet({
 
           {tab === "photos" ? (
             <div>
-              <div className="location-detail-toolbar">
-                <button type="button" className="btn-secondary" disabled={!canContribute || busy !== null} onClick={handlePickFile}>
-                  <ImagePlus size={15} />
-                  {busy === "photo" ? "Uploading..." : "Add photo"}
-                </button>
-                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={handlePhotoChange} />
-              </div>
               {photosLoading ? <p>Loading photos...</p> : null}
               {!photosLoading && orderedPhotos.length === 0 ? <p>No photos yet.</p> : null}
               {activeGalleryPhoto ? (

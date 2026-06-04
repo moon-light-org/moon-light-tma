@@ -5,22 +5,28 @@ type UpsertUserParams = {
   telegramUser: TelegramUser;
   telegramInitData: string | null;
   nickname?: string | null;
+  avatarUrl?: string | null;
 };
 
 export async function upsertUserProfile({
-  telegramUser,
   telegramInitData,
   nickname,
+  avatarUrl,
 }: UpsertUserParams): Promise<UserProfile> {
   const normalizedNickname = typeof nickname === "string" ? nickname.trim() : null;
+  const normalizedAvatarUrl = typeof avatarUrl === "string" ? avatarUrl.trim() : avatarUrl;
+  const body: { nickname: string | null; avatarUrl?: string | null } = {
+    nickname: normalizedNickname && normalizedNickname.length > 0 ? normalizedNickname : null,
+  };
+
+  if (avatarUrl !== undefined) {
+    body.avatarUrl = normalizedAvatarUrl && normalizedAvatarUrl.length > 0 ? normalizedAvatarUrl : null;
+  }
 
   return httpJson<UserProfile>("/api/users", {
     method: "POST",
     telegramInitData,
-    body: {
-      nickname: normalizedNickname && normalizedNickname.length > 0 ? normalizedNickname : null,
-      avatarUrl: telegramUser.photo_url ?? null,
-    },
+    body,
   });
 }
 

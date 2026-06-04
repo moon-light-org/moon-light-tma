@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { X, CalendarDays, MapPin } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { X, CalendarDays, MapPin, ImagePlus } from "lucide-react";
 import type { TelegramUser, UserProfile } from "../../entities/user/model/types";
 
 type ProfileSheetProps = {
@@ -8,11 +8,13 @@ type ProfileSheetProps = {
   telegramUser: TelegramUser | null;
   userProfile: UserProfile | null;
   placesAddedCount: number;
-  isSavingNickname: boolean;
-  nicknameError: string | null;
-  onSaveNickname: (nickname: string) => Promise<void>;
+  isSavingProfile: boolean;
+  profileError: string | null;
+  onSaveProfile: (nickname: string, avatarUrl?: string | null) => Promise<void>;
   onClose: () => void;
 };
+
+const MAX_IMAGE_BYTES = 1024 * 1024;
 
 export function ProfileSheet({
   isOpen,
@@ -20,18 +22,25 @@ export function ProfileSheet({
   telegramUser,
   userProfile,
   placesAddedCount,
-  isSavingNickname,
-  nicknameError,
-  onSaveNickname,
+  isSavingProfile,
+  profileError,
+  onSaveProfile,
   onClose,
 }: ProfileSheetProps) {
   const [nicknameInput, setNicknameInput] = useState(userProfile?.nickname ?? "");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile?.avatar_url ?? telegramUser?.photo_url ?? null);
+  const [avatarUpload, setAvatarUpload] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setNicknameInput(userProfile?.nickname ?? "");
+      setAvatarPreview(userProfile?.avatar_url ?? telegramUser?.photo_url ?? null);
+      setAvatarUpload(null);
+      setLocalError(null);
     }
-  }, [isOpen, userProfile?.nickname]);
+  }, [isOpen, telegramUser?.photo_url, userProfile?.avatar_url, userProfile?.nickname]);
 
   if (!isOpen) {
     return null;
@@ -42,7 +51,40 @@ export function ProfileSheet({
   const joinedDate = formatJoinedDate(userProfile?.created_at);
 
   const handleSave = async () => {
-    await onSaveNickname(nicknameInput);
+    await onSaveProfile(nicknameInput, avatarUpload ?? undefined);
+    setAvatarUpload(null);
+    setLocalError(null);
+  };
+
+  const handleAvatarPick = () => {
+    if (isSavingProfile) {
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setLocalError("Only image files are allowed.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setLocalError("Image must be 1MB or smaller.");
+      return;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setAvatarUpload(dataUrl);
+      setAvatarPreview(dataUrl);
+      setLocalError(null);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Failed to read image file");
+    }
   };
 
   return (
@@ -64,8 +106,25 @@ export function ProfileSheet({
 
         <div className="profile-sheet__body">
           <div className="profile-sheet__user">
-            <div className="profile-sheet__avatar" aria-hidden="true">
-              {profileInitial}
+            <div className="profile-sheet__avatar-wrap">
+              <div className="profile-sheet__avatar" aria-hidden="true">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="" />
+                ) : (
+                  profileInitial
+                )}
+              </div>
+              <button type="button" className="profile-sheet__avatar-action" onClick={handleAvatarPick} disabled={isSavingProfile}>
+                <ImagePlus size={14} />
+                Upload avatar
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                hidden
+                onChange={handleAvatarChange}
+              />
             </div>
             <div className="profile-sheet__identity">
               <h4>{displayName}</h4>
@@ -105,9 +164,10 @@ export function ProfileSheet({
               maxLength={32}
               placeholder="Enter nickname"
             />
-            {nicknameError ? <p className="onboarding-error">{nicknameError}</p> : null}
-            <button type="button" className="btn-primary onboarding-submit" onClick={handleSave} disabled={isSavingNickname}>
-              {isSavingNickname ? "Saving..." : "Save nickname"}
+            {localError ? <p className="onboarding-error">{localError}</p> : null}
+            {profileError ? <p className="onboarding-error">{profileError}</p> : null}
+            <button type="button" className="btn-primary onboarding-submit" onClick={handleSave} disabled={isSavingProfile}>
+              {isSavingProfile ? "Saving..." : "Save profile"}
             </button>
           </div>
         </div>
@@ -131,4 +191,19 @@ function formatJoinedDate(createdAt?: string): string {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Failed to read image file"));
+    };
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.readAsDataURL(file);
+  });
 }
