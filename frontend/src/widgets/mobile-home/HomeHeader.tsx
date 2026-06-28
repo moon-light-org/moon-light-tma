@@ -6,7 +6,6 @@ type HomeHeaderProps = {
   onToggleCategory: (category: LocationCategory | "all") => void;
   onSearchClick: () => void;
   profileInitial: string;
-  profileAvatarUrl?: string | null;
   onProfileClick: () => void;
   isAdmin: boolean;
   onAdminClick: () => void;
@@ -28,7 +27,6 @@ export function HomeHeader({
   onToggleCategory,
   onSearchClick,
   profileInitial,
-  profileAvatarUrl,
   onProfileClick,
   isAdmin,
   onAdminClick,
@@ -52,7 +50,7 @@ export function HomeHeader({
           <span className="search-bar__avatar-wrap">
             <button className="search-bar__avatar-btn" type="button" onClick={onProfileClick} aria-label="Open profile">
               <span className="search-bar__avatar" aria-hidden="true">
-                {profileAvatarUrl ? <img src={profileAvatarUrl} alt="" /> : profileInitial}
+                {profileInitial}
               </span>
             </button>
           </span>

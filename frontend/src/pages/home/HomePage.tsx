@@ -25,6 +25,8 @@ import {
   upsertUserProfile,
 } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
+import { readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
+import { createDefaultNickname, isProfileComplete } from "../../entities/user/model/profileDefaults";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
@@ -57,6 +59,7 @@ const DEV_STUB_PROFILE: UserProfile = {
 export function HomePage() {
   const telegramUser     = useTelegramUser();
   const telegramInitData = getTelegramInitData();
+  const telegramUserId = telegramUser?.id ?? null;
 
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
@@ -100,17 +103,15 @@ export function HomePage() {
   } | null>(null);
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
 
-  const telegramUserKey = useMemo(() => {
-    if (!telegramUser) {
-      return "anon";
-    }
-    return `${telegramUser.id}:${telegramUser.username ?? ""}:${telegramUser.first_name ?? ""}:${telegramUser.photo_url ?? ""}`;
-  }, [telegramUser]);
+  const defaultNickname = useMemo(
+    () => createDefaultNickname(telegramUserId ?? DEV_STUB_PROFILE.telegram_id),
+    [telegramUserId]
+  );
 
   useEffect(() => {
     let isActive = true;
     async function bootstrap() {
-      if (!telegramUser) {
+      if (telegramUserId === null) {
         try {
           const loadedLocations = await fetchLocations(null);
           if (isActive) {
@@ -141,15 +142,22 @@ export function HomePage() {
         return;
       }
 
+      const cachedProfile = readCachedProfile(telegramUserId);
+      if (cachedProfile && isActive) {
+        setUserProfile(cachedProfile);
+        setIsOnboardingOpen(!isProfileComplete(cachedProfile));
+      }
+
       try {
         const [user, loadedLocations] = await Promise.all([
-          getOrCreateUser(telegramUser, telegramInitData),
+          getOrCreateUser(telegramInitData),
           fetchLocations(telegramInitData),
         ]);
         if (!isActive) return;
         setUserProfile(user);
+        writeCachedProfile(user);
         setLocations(loadedLocations);
-        setIsOnboardingOpen(!isNicknameConfigured(user.nickname));
+        setIsOnboardingOpen(!isProfileComplete(user));
       } catch (err) {
         if (!isActive) return;
         // Show error in toast but don't block the map
@@ -161,7 +169,7 @@ export function HomePage() {
     }
     void bootstrap();
     return () => { isActive = false; };
-  }, [telegramInitData, telegramUserKey]);
+  }, [telegramInitData, telegramUserId]);
 
   const profileInitial = useMemo(() => {
     const fromProfile = userProfile?.nickname?.trim();
@@ -192,11 +200,11 @@ export function HomePage() {
     setOnboardingError(null);
     try {
       const updatedProfile = await upsertUserProfile({
-        telegramUser,
         telegramInitData,
         nickname,
       });
       setUserProfile(updatedProfile);
+      writeCachedProfile(updatedProfile);
       setOnboardingError(null);
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : "Failed to save nickname");
@@ -204,6 +212,10 @@ export function HomePage() {
     } finally {
       setIsOnboardingSubmitting(false);
     }
+  };
+
+  const skipOnboarding = async () => {
+    await submitOnboardingNickname(defaultNickname);
   };
 
   const handlePickLocation = (latitude: number, longitude: number) => {
@@ -328,7 +340,7 @@ export function HomePage() {
     );
   };
 
-  const submitProfile = async (nickname: string, avatarUrl?: string | null) => {
+  const submitProfile = async (nickname: string) => {
     if (!telegramUser) {
       return;
     }
@@ -336,12 +348,11 @@ export function HomePage() {
     setProfileError(null);
     try {
       const updatedProfile = await upsertUserProfile({
-        telegramUser,
         telegramInitData,
         nickname,
-        avatarUrl,
       });
       setUserProfile(updatedProfile);
+      writeCachedProfile(updatedProfile);
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : "Failed to save profile");
       throw err;
@@ -477,7 +488,6 @@ export function HomePage() {
         onToggleCategory={handleToggleCategory}
         onSearchClick={() => setIsSearchOpen(true)}
         profileInitial={profileInitial}
-        profileAvatarUrl={userProfile?.avatar_url ?? telegramUser?.photo_url ?? null}
         onProfileClick={() => {
           setProfileError(null);
           setIsProfileOpen(true);
@@ -526,17 +536,19 @@ export function HomePage() {
         }}
       />
 
-      <ProfileSheet
-        isOpen={isProfileOpen}
-        profileInitial={profileInitial}
-        telegramUser={telegramUser}
-        userProfile={userProfile}
-        placesAddedCount={placesAddedCount}
-        isSavingProfile={isProfileSaving}
-        profileError={profileError}
-        onSaveProfile={submitProfile}
-        onClose={() => setIsProfileOpen(false)}
-      />
+      {isProfileOpen ? (
+        <ProfileSheet
+          isOpen={isProfileOpen}
+          profileInitial={profileInitial}
+          telegramUser={telegramUser}
+          userProfile={userProfile}
+          placesAddedCount={placesAddedCount}
+          isSavingProfile={isProfileSaving}
+          profileError={profileError}
+          onSaveProfile={submitProfile}
+          onClose={() => setIsProfileOpen(false)}
+        />
+      ) : null}
 
       <AdminSheet
         isOpen={isAdminOpen}
@@ -604,21 +616,14 @@ export function HomePage() {
 
       {isOnboardingOpen && telegramUser && (
         <OnboardingFlow
-          initialName={telegramUser.first_name}
+          defaultNickname={defaultNickname}
           isSubmitting={isOnboardingSubmitting}
           error={onboardingError}
           onSubmitNickname={submitOnboardingNickname}
+          onSkip={skipOnboarding}
           onComplete={() => setIsOnboardingOpen(false)}
         />
       )}
     </main>
   );
-}
-
-function isNicknameConfigured(nickname: string | null | undefined): boolean {
-  const normalized = nickname?.trim() ?? "";
-  if (!normalized) {
-    return false;
-  }
-  return !/^user_\d+$/i.test(normalized);
 }

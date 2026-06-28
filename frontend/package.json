@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --outDir .tmp-tests src/entities/user/model/profileDefaults.ts && node tests/profileDefaults.spec.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

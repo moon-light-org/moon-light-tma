@@ -1,8 +1,7 @@
-import type { UserProfile, TelegramUser } from "../model/types";
+import type { UserProfile } from "../model/types";
 import { httpJson } from "../../../shared/api/http";
 
 type UpsertUserParams = {
-  telegramUser: TelegramUser;
   telegramInitData: string | null;
   nickname?: string | null;
   avatarUrl?: string | null;
@@ -30,12 +29,8 @@ export async function upsertUserProfile({
   });
 }
 
-export async function getOrCreateUser(
-  telegramUser: TelegramUser,
-  telegramInitData: string | null
-): Promise<UserProfile> {
+export async function getOrCreateUser(telegramInitData: string | null): Promise<UserProfile> {
   return upsertUserProfile({
-    telegramUser,
     telegramInitData,
     nickname: null,
   });
