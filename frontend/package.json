@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --outDir .tmp-tests src/entities/user/model/profileDefaults.ts src/entities/user/model/locationOnboardingStorage.ts && node tests/profileDefaults.spec.mjs && node tests/locationOnboardingStorage.spec.mjs",
+    "test": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --outDir .tmp-tests src/entities/user/model/profileDefaults.ts src/entities/user/model/locationOnboardingStorage.ts && node tests/profileDefaults.spec.mjs && node tests/locationOnboardingStorage.spec.mjs && node tests/uiSource.spec.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

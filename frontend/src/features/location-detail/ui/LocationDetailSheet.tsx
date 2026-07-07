@@ -91,7 +91,7 @@ export function LocationDetailSheet({
       <div className="bottom-sheet location-detail-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div className="location-detail-hero">
-          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__fallback">No image</div>}
+          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__skeleton" aria-hidden="true" />}
         </div>
         <div className="sheet-header">
           <h3>{location.name}</h3>

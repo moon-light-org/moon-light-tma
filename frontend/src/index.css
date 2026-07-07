@@ -421,6 +421,7 @@ button {
   display: flex;
   align-items: flex-end;
   animation: fadeIn 0.18s ease;
+  touch-action: pan-y;
 }
 
 @keyframes fadeIn {
@@ -443,6 +444,8 @@ button {
   max-height: 92vh;
   display: flex;
   flex-direction: column;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 @keyframes sheetUp {
@@ -524,6 +527,8 @@ button {
   overflow-y: auto;
   padding: 4px 20px 0;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 .sheet-body::-webkit-scrollbar {
@@ -550,14 +555,23 @@ button {
   object-fit: cover;
 }
 
-.location-detail-hero__fallback {
+.location-detail-hero__skeleton {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 36%, rgba(255, 255, 255, 0.9) 0 8%, transparent 8.5%),
+    linear-gradient(135deg, #edf1f6 0%, #f8fafc 48%, #e7edf5 100%);
+}
+
+.location-detail-hero__skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: skeletonShimmer 1.35s ease-in-out infinite;
 }
 
 .location-detail-rating {
@@ -674,6 +688,7 @@ button {
   background: var(--c-surface2);
   padding: 11px 13px;
   font: inherit;
+  font-size: 16px;
 }
 
 .location-review-list {
@@ -806,7 +821,7 @@ button {
   color: #ffffff;
   border: none;
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -819,6 +834,20 @@ button {
   appearance: none;
   -webkit-appearance: none;
   padding: 0 18px;
+}
+
+.create-location-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.create-location-loading-lottie {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: block;
 }
 
 .btn-primary:active {
@@ -1228,6 +1257,14 @@ code {
   -webkit-appearance: none;
 }
 
+.onboarding-panel--nickname {
+  gap: 14px;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg, rgba(26, 115, 232, 0.22), rgba(242, 153, 0, 0.22)) border-box;
+  border: 1px solid transparent;
+}
+
 button.onboarding-panel {
   cursor: pointer;
 }
@@ -1246,6 +1283,14 @@ button.onboarding-panel {
   line-height: 1.45;
   max-width: 300px;
   margin: 0 auto;
+}
+
+.onboarding-eyebrow {
+  color: var(--c-orange);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
 .onboarding-panel--form {
@@ -1273,6 +1318,31 @@ button.onboarding-panel {
   -webkit-appearance: none;
 }
 
+.onboarding-link-button {
+  align-self: center;
+  min-height: 42px;
+  border: none;
+  background: transparent;
+  color: var(--c-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.onboarding-link-button:active {
+  transform: scale(0.98);
+}
+
+.onboarding-link-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .onboarding-input:focus {
   border-color: var(--c-accent);
   background: #ffffff;
@@ -1288,13 +1358,16 @@ button.onboarding-panel {
   font-weight: 500;
 }
 
-.onboarding-blob {
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  margin: 0 auto 8px;
-  background: radial-gradient(circle at 30% 30%, #8ca0ff 0%, #5f63f2 60%, #3d45be 100%);
-  animation: bob 1.6s ease-in-out infinite;
+.onboarding-lottie {
+  width: min(260px, 72vw);
+  height: min(260px, 72vw);
+  display: block;
+  align-self: center;
+  margin: -22px auto -14px;
+}
+
+.onboarding-lottie--welcome {
+  margin-bottom: -18px;
 }
 
 .location-onboarding-shell {
@@ -1366,6 +1439,12 @@ button.onboarding-panel {
   }
   50% {
     transform: translateY(-8px) scale(1.04);
+  }
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
 

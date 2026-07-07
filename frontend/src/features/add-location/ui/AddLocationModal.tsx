@@ -10,6 +10,8 @@ type AddLocationModalProps = {
   onSubmit: (payload: CreateLocationPayload) => Promise<void>;
 };
 
+const CREATE_LOCATION_LOADING_LOTTIE_SRC = "https://lottie.host/8a8f2201-3695-4c92-8336-0a478f50f2f4/sKfxVRewDm.lottie";
+
 const categories: Array<{ value: LocationCategory; label: string; Icon: React.ElementType }> = [
   { value: "grocery",        label: "Grocery",    Icon: ShoppingBag },
   { value: "restaurant-bar", label: "Food & Bar", Icon: Utensils },
@@ -152,7 +154,20 @@ export function AddLocationModal({
 
         <div className="sheet-actions">
           <button type="button" className="btn-primary" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Saving…" : "Create location"}
+            {isSubmitting ? (
+              <span className="create-location-loading">
+                <dotlottie-wc
+                  className="create-location-loading-lottie"
+                  src={CREATE_LOCATION_LOADING_LOTTIE_SRC}
+                  autoplay
+                  loop
+                  aria-hidden="true"
+                />
+                <span>Creating...</span>
+              </span>
+            ) : (
+              "Create location"
+            )}
           </button>
         </div>
       </div>
