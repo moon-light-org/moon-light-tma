@@ -25,6 +25,7 @@ import {
   upsertUserProfile,
 } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
+import { hasSeenLocationOnboarding, markLocationOnboardingSeen } from "../../entities/user/model/locationOnboardingStorage";
 import { readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
 import { createDefaultNickname, isProfileComplete } from "../../entities/user/model/profileDefaults";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
@@ -35,6 +36,7 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
+import { LocationOnboardingPrompt } from "../../widgets/mobile-home/LocationOnboardingPrompt";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
@@ -79,6 +81,8 @@ export function HomePage() {
   const [isSubmitting,       setIsSubmitting]       = useState(false);
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
+  const [isLocationPromptOpen, setIsLocationPromptOpen] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -182,6 +186,22 @@ export function HomePage() {
     }
     return "?";
   }, [telegramUser, userProfile?.nickname]);
+
+  useEffect(() => {
+    if (
+      isLoading ||
+      isLocationPromptOpen ||
+      isOnboardingOpen ||
+      telegramUserId === null ||
+      !userProfile ||
+      !isProfileComplete(userProfile) ||
+      hasSeenLocationOnboarding(telegramUserId)
+    ) {
+      return;
+    }
+
+    setIsLocationPromptOpen(true);
+  }, [isLoading, isLocationPromptOpen, isOnboardingOpen, telegramUserId, userProfile]);
 
   const placesAddedCount = useMemo(() => {
     if (!userProfile) {
@@ -332,11 +352,59 @@ export function HomePage() {
     setSelectedLocationReviews((prev) => [created, ...prev]);
   };
 
-  const handleLocateMe = () => {
-    if (!navigator.geolocation) { setError("Geolocation is not available on this device."); return; }
+  const markLocationPromptSeen = () => {
+    if (telegramUserId !== null) {
+      markLocationOnboardingSeen(telegramUserId);
+    }
+  };
+
+  const openManualLocationSearch = () => {
+    markLocationPromptSeen();
+    setIsLocationPromptOpen(false);
+    setIsSearchOpen(true);
+  };
+
+  const requestUserLocation = (onFailure?: () => void, onSuccess?: () => void) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setError("Geolocation is not available on this device.");
+      onFailure?.();
+      return;
+    }
+
+    setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setFocusCoordinates({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => setError("Could not get your current location.")
+      (pos) => {
+        setFocusCoordinates({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setError(null);
+        setIsLocating(false);
+        onSuccess?.();
+      },
+      () => {
+        setIsLocating(false);
+        if (onFailure) {
+          onFailure();
+          return;
+        }
+        setError("Could not get your current location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const handleLocateMe = () => {
+    requestUserLocation();
+  };
+
+  const handleLocationPromptShare = () => {
+    markLocationPromptSeen();
+    requestUserLocation(
+      () => {
+        setIsLocationPromptOpen(false);
+        setIsSearchOpen(true);
+      },
+      () => {
+        setIsLocationPromptOpen(false);
+      }
     );
   };
 
@@ -535,6 +603,14 @@ export function HomePage() {
           setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
         }}
       />
+
+      {isLocationPromptOpen && telegramUser ? (
+        <LocationOnboardingPrompt
+          isLocating={isLocating}
+          onShareLocation={handleLocationPromptShare}
+          onSearchManually={openManualLocationSearch}
+        />
+      ) : null}
 
       {isProfileOpen ? (
         <ProfileSheet

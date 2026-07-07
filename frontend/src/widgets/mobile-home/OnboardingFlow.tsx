@@ -86,7 +86,7 @@ export function OnboardingFlow({
           </button>
           <button
             type="button"
-            className="onboarding-submit"
+            className="btn-secondary onboarding-submit"
             disabled={isSubmitting}
             onClick={() => void handleSkip()}
           >
