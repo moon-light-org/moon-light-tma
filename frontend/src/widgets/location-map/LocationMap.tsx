@@ -16,12 +16,16 @@ type MapProps = {
   }) => void;
   initialCenter?: { latitude: number; longitude: number };
   focusCoordinates?: { latitude: number; longitude: number } | null;
+  userLocation?: { latitude: number; longitude: number } | null;
 };
 
 const SOURCE_ID = "saved-locations";
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
 const POINT_LAYER_ID = "unclustered";
+const USER_LOCATION_SOURCE_ID = "user-location";
+const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
+const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
 const FALLBACK_MAP_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -73,9 +77,31 @@ export function LocationMap({
   onViewportChange,
   initialCenter = { latitude: 48.8566, longitude: 2.3522 },
   focusCoordinates = null,
+  userLocation = null,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const geoJson = useMemo(() => toGeoJson(locations), [locations]);
+  const userLocationGeoJson = useMemo<FeatureCollection<Point>>(
+    () => ({
+      type: "FeatureCollection",
+      features:
+        userLocation &&
+        Number.isFinite(userLocation.latitude) &&
+        Number.isFinite(userLocation.longitude)
+          ? [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: [userLocation.longitude, userLocation.latitude],
+                },
+                properties: {},
+              },
+            ]
+          : [],
+    }),
+    [userLocation]
+  );
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -192,6 +218,28 @@ export function LocationMap({
             "circle-radius": 8,
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 2.5,
+          }}
+        />
+      </Source>
+      <Source id={USER_LOCATION_SOURCE_ID} type="geojson" data={userLocationGeoJson}>
+        <Layer
+          id={USER_LOCATION_ACCURACY_LAYER_ID}
+          type="circle"
+          paint={{
+            "circle-color": "rgba(26, 115, 232, 0.18)",
+            "circle-radius": 18,
+            "circle-stroke-color": "rgba(26, 115, 232, 0.28)",
+            "circle-stroke-width": 1,
+          }}
+        />
+        <Layer
+          id={USER_LOCATION_POINT_LAYER_ID}
+          type="circle"
+          paint={{
+            "circle-color": "#1a73e8",
+            "circle-radius": 7,
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 3,
           }}
         />
       </Source>

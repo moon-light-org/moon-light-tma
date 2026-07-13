@@ -72,6 +72,7 @@ export function HomePage() {
   const [isSelectedLocationReviewsLoading, setIsSelectedLocationReviewsLoading] = useState(false);
   const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation,        setUserLocation]        = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<LocationCategory[]>([]);
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
   const [isModalOpen,        setIsModalOpen]        = useState(false);
@@ -374,7 +375,9 @@ export function HomePage() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setFocusCoordinates({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        setUserLocation(coords);
+        setFocusCoordinates(coords);
         setError(null);
         setIsLocating(false);
         onSuccess?.();
@@ -548,6 +551,7 @@ export function HomePage() {
         onLocationSelect={setSelectedLocation}
         onViewportChange={setViewportBounds}
         focusCoordinates={focusCoordinates}
+        userLocation={userLocation}
       />
 
       {/* Overlaid header: search + filter chips */}

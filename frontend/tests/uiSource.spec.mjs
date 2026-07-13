@@ -5,6 +5,8 @@ const indexHtml = readFileSync("index.html", "utf8");
 const onboarding = readFileSync("src/widgets/mobile-home/OnboardingFlow.tsx", "utf8");
 const addLocation = readFileSync("src/features/add-location/ui/AddLocationModal.tsx", "utf8");
 const locationDetail = readFileSync("src/features/location-detail/ui/LocationDetailSheet.tsx", "utf8");
+const homePage = readFileSync("src/pages/home/HomePage.tsx", "utf8");
+const locationMap = readFileSync("src/widgets/location-map/LocationMap.tsx", "utf8");
 
 assert.match(indexHtml, /dotlottie-wc@0\.9\.14/);
 assert.match(indexHtml, /maximum-scale=1\.0/);
@@ -20,5 +22,14 @@ assert.match(addLocation, /create-location-loading-lottie/);
 
 assert.match(locationDetail, /location-detail-hero__skeleton/);
 assert.doesNotMatch(locationDetail, />No image</);
+
+assert.match(homePage, /const \[userLocation,\s*setUserLocation\]/);
+assert.match(homePage, /setUserLocation\(coords\)/);
+assert.match(homePage, /userLocation=\{userLocation\}/);
+
+assert.match(locationMap, /userLocation\?: \{ latitude: number; longitude: number \} \| null/);
+assert.match(locationMap, /USER_LOCATION_SOURCE_ID/);
+assert.match(locationMap, /USER_LOCATION_POINT_LAYER_ID/);
+assert.match(locationMap, /userLocationGeoJson/);
 
 console.log("ui source tests passed");
