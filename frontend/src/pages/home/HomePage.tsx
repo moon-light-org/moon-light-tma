@@ -26,7 +26,7 @@ import {
   updateUserProfile,
 } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
-import { readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
+import { clearCachedProfile, readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
@@ -134,7 +134,6 @@ export function HomePage() {
         setUserProfile(cachedProfile);
         setCanRenderMap(true);
         setIsLoading(false);
-        return;
       }
 
       try {
@@ -144,6 +143,11 @@ export function HomePage() {
           setUserProfile(user);
           writeCachedProfile(user);
           setCanRenderMap(true);
+        } else if (cachedProfile && !user) {
+          clearCachedProfile(telegramUserId);
+          setUserProfile(null);
+          setCanRenderMap(false);
+          setIsOnboardingOpen(true);
         } else {
           setIsOnboardingOpen(true);
         }

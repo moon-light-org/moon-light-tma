@@ -29,6 +29,10 @@ assert.match(homePage, /userLocation=\{userLocation\}/);
 assert.match(homePage, /getCurrentUser/);
 assert.match(homePage, /signupUser/);
 assert.doesNotMatch(homePage, /getOrCreateUser/);
+assert.match(homePage, /clearCachedProfile/);
+assert.match(homePage, /const cachedProfile = readCachedProfile\(telegramUserId\)/);
+assert.match(homePage, /const user = await getCurrentUser\(telegramInitData\)/);
+assert.match(homePage, /if \(cachedProfile && !user\)/);
 
 assert.match(locationMap, /userLocation\?: \{ latitude: number; longitude: number \} \| null/);
 assert.match(locationMap, /USER_LOCATION_SOURCE_ID/);
