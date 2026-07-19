@@ -554,6 +554,7 @@ export function HomePage() {
             onMapPickLocation={handlePickLocation}
             onLocationSelect={setSelectedLocation}
             onViewportChange={setViewportBounds}
+            initialCenter={userLocation ?? undefined}
             focusCoordinates={focusCoordinates}
             userLocation={userLocation}
           />
