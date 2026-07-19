@@ -12,5 +12,5 @@ export function isGeneratedNickname(nickname: string | null | undefined): boolea
 
 export function isProfileComplete(profile: Pick<UserProfile, "nickname"> | null | undefined): boolean {
   const nickname = profile?.nickname.trim() ?? "";
-  return nickname.length > 0 && !isGeneratedNickname(nickname);
+  return nickname.length > 0;
 }

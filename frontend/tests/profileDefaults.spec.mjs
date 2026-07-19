@@ -11,7 +11,7 @@ assert.equal(isGeneratedNickname("moon_456789"), true);
 assert.equal(isGeneratedNickname("Moon_456789"), true);
 assert.equal(isGeneratedNickname("Alice"), false);
 assert.equal(isProfileComplete({ nickname: "Alice" }), true);
-assert.equal(isProfileComplete({ nickname: "moon_456789" }), false);
+assert.equal(isProfileComplete({ nickname: "moon_456789" }), true);
 assert.equal(isProfileComplete({ nickname: "" }), false);
 
 console.log("profileDefaults tests passed");

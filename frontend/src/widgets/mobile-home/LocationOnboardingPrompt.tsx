@@ -1,15 +1,15 @@
-import { MapPin, Navigation, Search } from "lucide-react";
+import { MapPin, Navigation, SkipForward } from "lucide-react";
 
 type LocationOnboardingPromptProps = {
   isLocating: boolean;
   onShareLocation: () => void;
-  onSearchManually: () => void;
+  onSkip: () => void;
 };
 
 export function LocationOnboardingPrompt({
   isLocating,
   onShareLocation,
-  onSearchManually,
+  onSkip,
 }: LocationOnboardingPromptProps) {
   return (
     <div className="location-onboarding-shell" role="dialog" aria-modal="true" aria-label="Choose your location">
@@ -20,7 +20,7 @@ export function LocationOnboardingPrompt({
         <p className="location-onboarding-card__eyebrow">Start nearby</p>
         <h2>Find Bitcoin places around you</h2>
         <p className="location-onboarding-card__copy">
-          Share your location once to center the map, or search for a city or place manually.
+          Share your location once to center the map now, or skip and explore from the default map view.
         </p>
         <div className="location-onboarding-card__actions">
           <button
@@ -36,10 +36,10 @@ export function LocationOnboardingPrompt({
             type="button"
             className="btn-secondary"
             disabled={isLocating}
-            onClick={onSearchManually}
+            onClick={onSkip}
           >
-            <Search size={17} />
-            Search manually
+            <SkipForward size={17} />
+            Skip for now
           </button>
         </div>
       </section>

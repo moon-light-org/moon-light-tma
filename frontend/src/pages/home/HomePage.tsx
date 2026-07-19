@@ -20,14 +20,13 @@ import type {
 } from "../../entities/location/model/types";
 import {
   fetchAdminMembers,
-  getOrCreateUser,
+  getCurrentUser,
+  signupUser,
   updateAdminMemberRole,
-  upsertUserProfile,
+  updateUserProfile,
 } from "../../entities/user/api/userApi";
 import type { UserProfile } from "../../entities/user/model/types";
-import { hasSeenLocationOnboarding, markLocationOnboardingSeen } from "../../entities/user/model/locationOnboardingStorage";
 import { readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
-import { createDefaultNickname, isProfileComplete } from "../../entities/user/model/profileDefaults";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
@@ -79,6 +78,7 @@ export function HomePage() {
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
+  const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
@@ -108,28 +108,13 @@ export function HomePage() {
   } | null>(null);
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
 
-  const defaultNickname = useMemo(
-    () => createDefaultNickname(telegramUserId ?? DEV_STUB_PROFILE.telegram_id),
-    [telegramUserId]
-  );
-
   useEffect(() => {
     let isActive = true;
     async function bootstrap() {
       if (telegramUserId === null) {
-        try {
-          const loadedLocations = await fetchLocations(null);
-          if (isActive) {
-            setLocations(loadedLocations);
-          }
-        } catch (err) {
-          if (isActive) {
-            setError(err instanceof Error ? err.message : "Failed to load locations");
-          }
-        } finally {
-          if (isActive) {
-            setIsLoading(false);
-          }
+        if (isActive) {
+          setCanRenderMap(true);
+          setIsLoading(false);
         }
         return;
       }
@@ -137,37 +122,35 @@ export function HomePage() {
       // In dev-fallback mode, skip user registration but still fetch locations.
       if (IS_DEV_FALLBACK) {
         setUserProfile(DEV_STUB_PROFILE);
-        try {
-          const loadedLocations = await fetchLocations(null);
-          if (isActive) setLocations(loadedLocations);
-        } catch {
-          // backend might not be running in pure frontend dev — that's fine
+        if (isActive) {
+          setCanRenderMap(true);
+          setIsLoading(false);
         }
-        if (isActive) setIsLoading(false);
         return;
       }
 
       const cachedProfile = readCachedProfile(telegramUserId);
       if (cachedProfile && isActive) {
         setUserProfile(cachedProfile);
-        setIsOnboardingOpen(!isProfileComplete(cachedProfile));
+        setCanRenderMap(true);
+        setIsLoading(false);
+        return;
       }
 
       try {
-        const [user, loadedLocations] = await Promise.all([
-          getOrCreateUser(telegramInitData),
-          fetchLocations(telegramInitData),
-        ]);
+        const user = await getCurrentUser(telegramInitData);
         if (!isActive) return;
-        setUserProfile(user);
-        writeCachedProfile(user);
-        setLocations(loadedLocations);
-        setIsOnboardingOpen(!isProfileComplete(user));
+        if (user) {
+          setUserProfile(user);
+          writeCachedProfile(user);
+          setCanRenderMap(true);
+        } else {
+          setIsOnboardingOpen(true);
+        }
       } catch (err) {
         if (!isActive) return;
-        // Show error in toast but don't block the map
         setError(err instanceof Error ? err.message : "Failed to load app data");
-        setUserProfile(DEV_STUB_PROFILE);
+        setCanRenderMap(true);
       } finally {
         if (isActive) setIsLoading(false);
       }
@@ -188,22 +171,6 @@ export function HomePage() {
     return "?";
   }, [telegramUser, userProfile?.nickname]);
 
-  useEffect(() => {
-    if (
-      isLoading ||
-      isLocationPromptOpen ||
-      isOnboardingOpen ||
-      telegramUserId === null ||
-      !userProfile ||
-      !isProfileComplete(userProfile) ||
-      hasSeenLocationOnboarding(telegramUserId)
-    ) {
-      return;
-    }
-
-    setIsLocationPromptOpen(true);
-  }, [isLoading, isLocationPromptOpen, isOnboardingOpen, telegramUserId, userProfile]);
-
   const placesAddedCount = useMemo(() => {
     if (!userProfile) {
       return 0;
@@ -220,12 +187,12 @@ export function HomePage() {
     setIsOnboardingSubmitting(true);
     setOnboardingError(null);
     try {
-      const updatedProfile = await upsertUserProfile({
+      const createdProfile = await signupUser({
         telegramInitData,
         nickname,
       });
-      setUserProfile(updatedProfile);
-      writeCachedProfile(updatedProfile);
+      setUserProfile(createdProfile);
+      writeCachedProfile(createdProfile);
       setOnboardingError(null);
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : "Failed to save nickname");
@@ -236,7 +203,24 @@ export function HomePage() {
   };
 
   const skipOnboarding = async () => {
-    await submitOnboardingNickname(defaultNickname);
+    if (!telegramUser) {
+      return;
+    }
+    setIsOnboardingSubmitting(true);
+    setOnboardingError(null);
+    try {
+      const createdProfile = await signupUser({
+        telegramInitData,
+      });
+      setUserProfile(createdProfile);
+      writeCachedProfile(createdProfile);
+      setOnboardingError(null);
+    } catch (err) {
+      setOnboardingError(err instanceof Error ? err.message : "Failed to create profile");
+      throw err;
+    } finally {
+      setIsOnboardingSubmitting(false);
+    }
   };
 
   const handlePickLocation = (latitude: number, longitude: number) => {
@@ -353,16 +337,9 @@ export function HomePage() {
     setSelectedLocationReviews((prev) => [created, ...prev]);
   };
 
-  const markLocationPromptSeen = () => {
-    if (telegramUserId !== null) {
-      markLocationOnboardingSeen(telegramUserId);
-    }
-  };
-
-  const openManualLocationSearch = () => {
-    markLocationPromptSeen();
+  const finishLocationOnboarding = () => {
+    setCanRenderMap(true);
     setIsLocationPromptOpen(false);
-    setIsSearchOpen(true);
   };
 
   const requestUserLocation = (onFailure?: () => void, onSuccess?: () => void) => {
@@ -399,16 +376,18 @@ export function HomePage() {
   };
 
   const handleLocationPromptShare = () => {
-    markLocationPromptSeen();
     requestUserLocation(
       () => {
-        setIsLocationPromptOpen(false);
-        setIsSearchOpen(true);
+        finishLocationOnboarding();
       },
       () => {
-        setIsLocationPromptOpen(false);
+        finishLocationOnboarding();
       }
     );
+  };
+
+  const skipLocationPrompt = () => {
+    finishLocationOnboarding();
   };
 
   const submitProfile = async (nickname: string) => {
@@ -418,7 +397,7 @@ export function HomePage() {
     setIsProfileSaving(true);
     setProfileError(null);
     try {
-      const updatedProfile = await upsertUserProfile({
+      const updatedProfile = await updateUserProfile({
         telegramInitData,
         nickname,
       });
@@ -429,6 +408,25 @@ export function HomePage() {
       throw err;
     } finally {
       setIsProfileSaving(false);
+    }
+  };
+
+  const openProfile = async () => {
+    setProfileError(null);
+    setIsProfileOpen(true);
+
+    if (!telegramUser) {
+      return;
+    }
+
+    try {
+      const freshProfile = await getCurrentUser(telegramInitData);
+      if (freshProfile) {
+        setUserProfile(freshProfile);
+        writeCachedProfile(freshProfile);
+      }
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Failed to refresh profile");
     }
   };
 
@@ -544,49 +542,64 @@ export function HomePage() {
   /* ── Main UI ─────────────────────────────────────────── */
   return (
     <main className="map-shell">
-      {/* Full-screen map */}
-      <LocationMap
-        locations={visibleLocations}
-        onMapPickLocation={handlePickLocation}
-        onLocationSelect={setSelectedLocation}
-        onViewportChange={setViewportBounds}
-        focusCoordinates={focusCoordinates}
-        userLocation={userLocation}
-      />
+      {canRenderMap ? (
+        <>
+          {/* Full-screen map */}
+          <LocationMap
+            locations={visibleLocations}
+            onMapPickLocation={handlePickLocation}
+            onLocationSelect={setSelectedLocation}
+            onViewportChange={setViewportBounds}
+            focusCoordinates={focusCoordinates}
+            userLocation={userLocation}
+          />
 
-      {/* Overlaid header: search + filter chips */}
-      <HomeHeader
-        selectedCategories={selectedCategories}
-        onToggleCategory={handleToggleCategory}
-        onSearchClick={() => setIsSearchOpen(true)}
-        profileInitial={profileInitial}
-        onProfileClick={() => {
-          setProfileError(null);
-          setIsProfileOpen(true);
-        }}
-        isAdmin={isAdminUser}
-        onAdminClick={() => {
-          void openAdminPanel();
-        }}
-      />
+          {/* Overlaid header: search + filter chips */}
+          <HomeHeader
+            selectedCategories={selectedCategories}
+            onToggleCategory={handleToggleCategory}
+            onSearchClick={() => setIsSearchOpen(true)}
+            profileInitial={profileInitial}
+            onProfileClick={() => {
+              void openProfile();
+            }}
+            isAdmin={isAdminUser}
+            onAdminClick={() => {
+              void openAdminPanel();
+            }}
+          />
 
-      {/* Floating action buttons */}
-      <HomeControls
-        canLocate={typeof window !== "undefined" && Boolean(window.navigator?.geolocation)}
-        onLocateMe={handleLocateMe}
-      />
+          {/* Floating action buttons */}
+          <HomeControls
+            canLocate={typeof window !== "undefined" && Boolean(window.navigator?.geolocation)}
+            onLocateMe={handleLocateMe}
+          />
 
-      <LocationDetailSheet
-        isOpen={Boolean(selectedLocation)}
-        location={selectedLocation}
-        photos={selectedLocationPhotos}
-        reviews={selectedLocationReviews}
-        photosLoading={isSelectedLocationPhotosLoading}
-        reviewsLoading={isSelectedLocationReviewsLoading}
-        canContribute={Boolean(telegramUser && userProfile)}
-        onClose={() => setSelectedLocation(null)}
-        onCreateReview={handleCreateLocationReview}
-      />
+          <LocationDetailSheet
+            isOpen={Boolean(selectedLocation)}
+            location={selectedLocation}
+            photos={selectedLocationPhotos}
+            reviews={selectedLocationReviews}
+            photosLoading={isSelectedLocationPhotosLoading}
+            reviewsLoading={isSelectedLocationReviewsLoading}
+            canContribute={Boolean(telegramUser && userProfile)}
+            onClose={() => setSelectedLocation(null)}
+            onCreateReview={handleCreateLocationReview}
+          />
+
+          {/* Search sheet */}
+          <SearchSheet
+            isOpen={isSearchOpen}
+            locations={locations}
+            telegramInitData={telegramInitData}
+            onClose={() => setIsSearchOpen(false)}
+            onSelectLocation={(loc) => {
+              setSelectedLocation(loc);
+              setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
+            }}
+          />
+        </>
+      ) : null}
 
       {/* Error toast */}
       {error && (
@@ -596,23 +609,11 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Search sheet */}
-      <SearchSheet
-        isOpen={isSearchOpen}
-        locations={locations}
-        telegramInitData={telegramInitData}
-        onClose={() => setIsSearchOpen(false)}
-        onSelectLocation={(loc) => {
-          setSelectedLocation(loc);
-          setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
-        }}
-      />
-
       {isLocationPromptOpen && telegramUser ? (
         <LocationOnboardingPrompt
           isLocating={isLocating}
           onShareLocation={handleLocationPromptShare}
-          onSearchManually={openManualLocationSearch}
+          onSkip={skipLocationPrompt}
         />
       ) : null}
 
@@ -667,7 +668,7 @@ export function HomePage() {
       />
 
       {/* Tap to add – prompt sheet */}
-      {telegramUser && userProfile ? (
+      {canRenderMap && telegramUser && userProfile ? (
         <>
           <TapLocationSheet
             isOpen={isTapSheetOpen}
@@ -685,23 +686,25 @@ export function HomePage() {
             onSubmit={handleCreateLocation}
           />
         </>
-      ) : (
+      ) : canRenderMap ? (
         <div className="error-toast" role="status">
           <Map size={18} />
           <span>
             Viewing existing locations only. Open in Telegram to add new ones.
           </span>
         </div>
-      )}
+      ) : null}
 
       {isOnboardingOpen && telegramUser && (
         <OnboardingFlow
-          defaultNickname={defaultNickname}
           isSubmitting={isOnboardingSubmitting}
           error={onboardingError}
           onSubmitNickname={submitOnboardingNickname}
           onSkip={skipOnboarding}
-          onComplete={() => setIsOnboardingOpen(false)}
+          onComplete={() => {
+            setIsOnboardingOpen(false);
+            setIsLocationPromptOpen(true);
+          }}
         />
       )}
     </main>

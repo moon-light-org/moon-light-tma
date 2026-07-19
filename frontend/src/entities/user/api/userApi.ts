@@ -1,27 +1,43 @@
 import type { UserProfile } from "../model/types";
-import { httpJson } from "../../../shared/api/http";
+import { HttpError, httpJson } from "../../../shared/api/http";
 
-type UpsertUserParams = {
+type UserMutationParams = {
   telegramInitData: string | null;
   nickname?: string | null;
   avatarUrl?: string | null;
 };
 
-export async function upsertUserProfile({
-  telegramInitData,
-  nickname,
-  avatarUrl,
-}: UpsertUserParams): Promise<UserProfile> {
+function buildUserMutationBody({ nickname, avatarUrl }: Omit<UserMutationParams, "telegramInitData">) {
   const normalizedNickname = typeof nickname === "string" ? nickname.trim() : null;
   const normalizedAvatarUrl = typeof avatarUrl === "string" ? avatarUrl.trim() : avatarUrl;
-  const body: { nickname: string | null; avatarUrl?: string | null } = {
-    nickname: normalizedNickname && normalizedNickname.length > 0 ? normalizedNickname : null,
-  };
+  const body: { nickname?: string | null; avatarUrl?: string | null } = {};
+
+  if (nickname !== undefined) {
+    body.nickname = normalizedNickname && normalizedNickname.length > 0 ? normalizedNickname : null;
+  }
 
   if (avatarUrl !== undefined) {
     body.avatarUrl = normalizedAvatarUrl && normalizedAvatarUrl.length > 0 ? normalizedAvatarUrl : null;
   }
 
+  return body;
+}
+
+export async function getCurrentUser(telegramInitData: string | null): Promise<UserProfile | null> {
+  try {
+    return await httpJson<UserProfile>("/api/users/me", {
+      telegramInitData,
+    });
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function signupUser({ telegramInitData, nickname, avatarUrl }: UserMutationParams): Promise<UserProfile> {
+  const body = buildUserMutationBody({ nickname, avatarUrl });
   return httpJson<UserProfile>("/api/users", {
     method: "POST",
     telegramInitData,
@@ -29,10 +45,12 @@ export async function upsertUserProfile({
   });
 }
 
-export async function getOrCreateUser(telegramInitData: string | null): Promise<UserProfile> {
-  return upsertUserProfile({
+export async function updateUserProfile({ telegramInitData, nickname, avatarUrl }: UserMutationParams): Promise<UserProfile> {
+  const body = buildUserMutationBody({ nickname, avatarUrl });
+  return httpJson<UserProfile>("/api/users/me", {
+    method: "PATCH",
     telegramInitData,
-    nickname: null,
+    body,
   });
 }
 

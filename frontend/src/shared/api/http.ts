@@ -1,5 +1,15 @@
 const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3000").replace(/\/+$/, "");
 
+export class HttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+  }
+}
+
 type FetchOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
@@ -32,7 +42,7 @@ export async function httpJson<T>(path: string, options: FetchOptions = {}): Pro
     } catch {
       // no-op
     }
-    throw new Error(message);
+    throw new HttpError(message, response.status);
   }
 
   if (response.status === 204) {

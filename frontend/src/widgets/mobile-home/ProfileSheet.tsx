@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, CalendarDays, MapPin } from "lucide-react";
 import type { TelegramUser, UserProfile } from "../../entities/user/model/types";
 
@@ -27,6 +27,10 @@ export function ProfileSheet({
 }: ProfileSheetProps) {
   const [nicknameInput, setNicknameInput] = useState(userProfile?.nickname ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNicknameInput(userProfile?.nickname ?? "");
+  }, [userProfile?.nickname]);
 
   if (!isOpen) {
     return null;

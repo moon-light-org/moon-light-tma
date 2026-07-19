@@ -2,10 +2,8 @@ import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
 const HELLO_LOTTIE_SRC = "https://lottie.host/06b95c48-33c1-4edd-94ec-1e9d168c2f30/hhj7Rgkswv.lottie";
-const WELCOME_LOTTIE_SRC = "https://lottie.host/42ada56a-0e51-475b-a58e-4f64382f33ce/ufM6EL4mVR.lottie";
 
 type OnboardingFlowProps = {
-  defaultNickname: string;
   isSubmitting: boolean;
   error: string | null;
   onSubmitNickname: (nickname: string) => Promise<void>;
@@ -14,19 +12,16 @@ type OnboardingFlowProps = {
 };
 
 export function OnboardingFlow({
-  defaultNickname,
   isSubmitting,
   error,
   onSubmitNickname,
   onSkip,
   onComplete,
 }: OnboardingFlowProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [nickname, setNickname] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const trimmedNickname = useMemo(() => nickname.trim(), [nickname]);
-
-  const welcomeName = trimmedNickname || defaultNickname;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -37,7 +32,7 @@ export function OnboardingFlow({
     try {
       setLocalError(null);
       await onSubmitNickname(trimmedNickname);
-      setStep(3);
+      onComplete();
     } catch {
       // Parent sets and displays the error message.
     }
@@ -50,7 +45,7 @@ export function OnboardingFlow({
     try {
       setLocalError(null);
       await onSkip();
-      setStep(3);
+      onComplete();
     } catch {
       // Parent sets and displays the error message.
     }
@@ -81,7 +76,7 @@ export function OnboardingFlow({
             className="onboarding-input"
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
-            placeholder={defaultNickname}
+            placeholder="Enter nickname"
             autoFocus
             maxLength={32}
           />
@@ -100,23 +95,9 @@ export function OnboardingFlow({
             disabled={isSubmitting}
             onClick={() => void handleSkip()}
           >
-            Use {defaultNickname}
+            Skip for now
           </button>
         </form>
-      )}
-
-      {step === 3 && (
-        <button type="button" className="onboarding-panel" onClick={onComplete}>
-          <dotlottie-wc
-            className="onboarding-lottie onboarding-lottie--welcome"
-            src={WELCOME_LOTTIE_SRC}
-            autoplay
-            loop
-            aria-hidden="true"
-          />
-          <h1>Welcome, {welcomeName}</h1>
-          <p>Tap to open the map.</p>
-        </button>
       )}
     </div>
   );
