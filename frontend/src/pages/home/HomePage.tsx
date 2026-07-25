@@ -35,7 +35,6 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
-import { LocationOnboardingPrompt } from "../../widgets/mobile-home/LocationOnboardingPrompt";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
@@ -61,6 +60,7 @@ export function HomePage() {
   const telegramUser     = useTelegramUser();
   const telegramInitData = getTelegramInitData();
   const telegramUserId = telegramUser?.id ?? null;
+  const canAutoLocate = typeof window !== "undefined" && Boolean(window.navigator?.geolocation);
 
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
@@ -78,13 +78,12 @@ export function HomePage() {
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
+  const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = useState(() => !canAutoLocate);
   const [isLoading,          setIsLoading]          = useState(true);
   const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
-  const [isLocationPromptOpen, setIsLocationPromptOpen] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [onboardingError,    setOnboardingError]    = useState<string | null>(null);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -184,6 +183,42 @@ export function HomePage() {
   }, [locations, userProfile]);
 
   const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
+  const isResolvingInitialLocation = canRenderMap && !isOnboardingOpen && !hasResolvedInitialLocation && canAutoLocate;
+
+  const requestUserLocation = ({
+    onFailure,
+    onSuccess,
+    silent = false,
+  }: {
+    onFailure?: () => void;
+    onSuccess?: () => void;
+    silent?: boolean;
+  } = {}) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      if (!silent) {
+        setError("Geolocation is not available on this device.");
+      }
+      onFailure?.();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        setUserLocation(coords);
+        setFocusCoordinates(coords);
+        setError(null);
+        onSuccess?.();
+      },
+      () => {
+        if (!silent) {
+          setError("Could not get your current location.");
+        }
+        onFailure?.();
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const submitOnboardingNickname = async (nickname: string) => {
     if (!telegramUser) {
@@ -227,6 +262,22 @@ export function HomePage() {
       setIsOnboardingSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!canRenderMap || isOnboardingOpen || hasResolvedInitialLocation || !canAutoLocate) {
+      return;
+    }
+
+    requestUserLocation({
+      silent: true,
+      onFailure: () => {
+        setHasResolvedInitialLocation(true);
+      },
+      onSuccess: () => {
+        setHasResolvedInitialLocation(true);
+      },
+    });
+  }, [canAutoLocate, canRenderMap, hasResolvedInitialLocation, isOnboardingOpen]);
 
   const handlePickLocation = (latitude: number, longitude: number) => {
     if (!telegramUser || !userProfile) {
@@ -345,55 +396,10 @@ export function HomePage() {
 
   const finishLocationOnboarding = () => {
     setCanRenderMap(true);
-    setIsLocationPromptOpen(false);
-  };
-
-  const requestUserLocation = (onFailure?: () => void, onSuccess?: () => void) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("Geolocation is not available on this device.");
-      onFailure?.();
-      return;
-    }
-
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-        setUserLocation(coords);
-        setFocusCoordinates(coords);
-        setError(null);
-        setIsLocating(false);
-        onSuccess?.();
-      },
-      () => {
-        setIsLocating(false);
-        if (onFailure) {
-          onFailure();
-          return;
-        }
-        setError("Could not get your current location.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
   };
 
   const handleLocateMe = () => {
     requestUserLocation();
-  };
-
-  const handleLocationPromptShare = () => {
-    requestUserLocation(
-      () => {
-        finishLocationOnboarding();
-      },
-      () => {
-        finishLocationOnboarding();
-      }
-    );
-  };
-
-  const skipLocationPrompt = () => {
-    finishLocationOnboarding();
   };
 
   const submitProfile = async (nickname: string) => {
@@ -544,11 +550,11 @@ export function HomePage() {
   };
 
   /* ── Loading ────────────────────────────────────────── */
-  if (isLoading) {
+  if (isLoading || isResolvingInitialLocation) {
     return (
       <main className="center-screen">
         <div className="spinner" />
-        <p>Loading map…</p>
+        <p>{isResolvingInitialLocation ? "Finding your location..." : "Loading map…"}</p>
       </main>
     );
   }
@@ -629,14 +635,6 @@ export function HomePage() {
           <MapPin size={18} />
           <span>Select a point on the map to add a location.</span>
         </div>
-      ) : null}
-
-      {isLocationPromptOpen && telegramUser ? (
-        <LocationOnboardingPrompt
-          isLocating={isLocating}
-          onShareLocation={handleLocationPromptShare}
-          onSkip={skipLocationPrompt}
-        />
       ) : null}
 
       {isProfileOpen ? (
@@ -738,7 +736,7 @@ export function HomePage() {
           onSkip={skipOnboarding}
           onComplete={() => {
             setIsOnboardingOpen(false);
-            setIsLocationPromptOpen(true);
+            finishLocationOnboarding();
           }}
         />
       )}

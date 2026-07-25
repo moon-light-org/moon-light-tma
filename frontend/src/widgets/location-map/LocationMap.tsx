@@ -13,7 +13,7 @@ type MapProps = {
     maxLat: number;
     maxLon: number;
   }) => void;
-  initialCenter?: { latitude: number; longitude: number };
+  initialCenter?: { latitude: number; longitude: number } | null;
   focusCoordinates?: { latitude: number; longitude: number } | null;
   userLocation?: { latitude: number; longitude: number } | null;
 };
@@ -56,7 +56,7 @@ export function LocationMap({
   onMapPickLocation,
   onLocationSelect,
   onViewportChange,
-  initialCenter = { latitude: 48.8566, longitude: 2.3522 },
+  initialCenter = null,
   focusCoordinates = null,
   userLocation = null,
 }: MapProps) {
@@ -147,9 +147,9 @@ export function LocationMap({
     <Map
       ref={mapRef}
       initialViewState={{
-        latitude: initialCenter.latitude,
-        longitude: initialCenter.longitude,
-        zoom: 12,
+        latitude: initialCenter?.latitude ?? 20,
+        longitude: initialCenter?.longitude ?? 0,
+        zoom: initialCenter ? 12 : 2,
       }}
       mapStyle={MAP_STYLE_URL}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
