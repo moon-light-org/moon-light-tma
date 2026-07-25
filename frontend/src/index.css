@@ -613,6 +613,16 @@ button {
   margin-bottom: 12px;
 }
 
+.location-detail-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.location-detail-review-trigger {
+  min-width: 112px;
+}
+
 .location-gallery-main {
   border-radius: 12px;
   overflow: hidden;
@@ -673,6 +683,15 @@ button {
   color: #f59e0b;
 }
 
+.star-input--large {
+  justify-content: center;
+  gap: 10px;
+}
+
+.star-input--large button {
+  padding: 4px;
+}
+
 .field-textarea {
   width: 100%;
   min-height: 88px;
@@ -711,6 +730,32 @@ button {
   margin-top: 12px;
   color: #d93025;
   font-size: 13px;
+}
+
+.onboarding-panel--review {
+  position: relative;
+  max-width: 420px;
+  gap: 16px;
+}
+
+.review-flow-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.onboarding-lottie--review {
+  margin-top: -10px;
+}
+
+.onboarding-lottie--review-success {
+  margin-top: -12px;
+  margin-bottom: -4px;
+}
+
+.review-flow-textarea {
+  min-height: 120px;
+  resize: none;
 }
 
 /* ─── Form ───────────────────────────────────────────────────── */

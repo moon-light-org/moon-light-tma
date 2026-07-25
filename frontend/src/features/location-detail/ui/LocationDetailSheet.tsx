@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
-import { Star, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import type { Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
+import { ReviewFlowModal } from "./ReviewFlowModal";
 
 type TabKey = "description" | "photos" | "reviews";
 
@@ -28,10 +29,9 @@ export function LocationDetailSheet({
   onCreateReview,
 }: LocationDetailSheetProps) {
   const [tab, setTab] = useState<TabKey>("description");
-  const [rating, setRating] = useState(5);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-  const [reviewText, setReviewText] = useState("");
-  const [busy, setBusy] = useState<"review" | null>(null);
+  const [isReviewFlowOpen, setIsReviewFlowOpen] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const avgRating = useMemo(() => {
@@ -63,26 +63,28 @@ export function LocationDetailSheet({
   const heroPhoto = orderedPhotos[0]?.image_url ?? null;
   const activeGalleryPhoto = orderedPhotos[selectedPhotoIndex]?.image_url ?? null;
 
+  useEffect(() => {
+    if (!isOpen) {
+      setIsReviewFlowOpen(false);
+      setIsSubmittingReview(false);
+      setError(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen || !location) {
     return null;
   }
 
-  const handleSubmitReview = async () => {
-    const normalized = reviewText.trim();
-    if (!rating || rating < 1 || rating > 5) {
-      setError("Please select a rating from 1 to 5.");
-      return;
-    }
+  const handleSubmitReview = async (rating: number, text: string | null) => {
     try {
       setError(null);
-      setBusy("review");
-      await onCreateReview(rating, normalized.length ? normalized : null);
-      setReviewText("");
-      setRating(5);
+      setIsSubmittingReview(true);
+      await onCreateReview(rating, text);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add review");
+      throw err;
     } finally {
-      setBusy(null);
+      setIsSubmittingReview(false);
     }
   };
 
@@ -151,24 +153,11 @@ export function LocationDetailSheet({
           {tab === "reviews" ? (
             <div>
               <div className="location-detail-toolbar">
-                <div className="star-input" aria-label="Review rating">
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <button key={value} type="button" onClick={() => setRating(value)} className={value <= rating ? "active" : ""} aria-label={`${value} star`}>
-                      <Star size={16} fill={value <= rating ? "currentColor" : "none"} />
-                    </button>
-                  ))}
-                </div>
+                <h4 className="location-detail-section-title">Community reviews</h4>
+                <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
+                  Add review
+                </button>
               </div>
-              <textarea
-                className="field-textarea"
-                placeholder="Write a review (optional if you rate)"
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                maxLength={600}
-              />
-              <button type="button" className="btn-primary" disabled={!canContribute || busy !== null} onClick={handleSubmitReview}>
-                {busy === "review" ? "Adding..." : "Add review"}
-              </button>
               {reviewsLoading ? <p>Loading reviews...</p> : null}
               {!reviewsLoading && reviews.length === 0 ? <p>No reviews yet.</p> : null}
               <div className="location-review-list">
@@ -184,6 +173,17 @@ export function LocationDetailSheet({
 
           {error ? <p className="location-detail-error">{error}</p> : null}
         </div>
+
+        <ReviewFlowModal
+          isOpen={isReviewFlowOpen}
+          isSubmitting={isSubmittingReview}
+          error={error}
+          onClose={() => {
+            setIsReviewFlowOpen(false);
+            setError(null);
+          }}
+          onSubmit={handleSubmitReview}
+        />
       </div>
     </div>
   );

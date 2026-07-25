@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-
-const HELLO_LOTTIE_SRC = "https://lottie.host/06b95c48-33c1-4edd-94ec-1e9d168c2f30/hhj7Rgkswv.lottie";
+import { HELLO_LOTTIE_SRC } from "../../shared/ui/lotties";
 
 type OnboardingFlowProps = {
   isSubmitting: boolean;

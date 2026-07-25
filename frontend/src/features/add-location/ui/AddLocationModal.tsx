@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, MapPin, AlertCircle, ShoppingBag, Utensils, Grid2x2 } from "lucide-react";
 import type { CreateLocationPayload, LocationCategory } from "../../../entities/location/model/types";
+import { CREATE_LOCATION_LOADING_LOTTIE_SRC } from "../../../shared/ui/lotties";
 
 type AddLocationModalProps = {
   isOpen: boolean;
@@ -9,8 +10,6 @@ type AddLocationModalProps = {
   onClose: () => void;
   onSubmit: (payload: CreateLocationPayload) => Promise<void>;
 };
-
-const CREATE_LOCATION_LOADING_LOTTIE_SRC = "https://lottie.host/8a8f2201-3695-4c92-8336-0a478f50f2f4/sKfxVRewDm.lottie";
 
 const categories: Array<{ value: LocationCategory; label: string; Icon: React.ElementType }> = [
   { value: "grocery",        label: "Grocery",    Icon: ShoppingBag },
