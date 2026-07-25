@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Map } from "lucide-react";
+import { AlertCircle, Map, MapPin } from "lucide-react";
 import {
   fetchLocations,
   createLocation,
@@ -77,6 +77,7 @@ export function HomePage() {
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
+  const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
@@ -232,6 +233,7 @@ export function HomePage() {
       setError("Open in Telegram to add a new location.");
       return;
     }
+    setIsAwaitingMapPickForNewLocation(false);
     setPickedCoordinates({ latitude, longitude });
     setIsTapSheetOpen(true);
   };
@@ -434,6 +436,14 @@ export function HomePage() {
     }
   };
 
+  const handleAddLocationFromProfile = () => {
+    setIsProfileOpen(false);
+    setPickedCoordinates(null);
+    setIsTapSheetOpen(false);
+    setIsModalOpen(false);
+    setIsAwaitingMapPickForNewLocation(true);
+  };
+
   const openAdminPanel = async () => {
     setIsAdminOpen(true);
     setAdminError(null);
@@ -614,6 +624,13 @@ export function HomePage() {
         </div>
       )}
 
+      {canRenderMap && isAwaitingMapPickForNewLocation ? (
+        <div className="error-toast error-toast--info" role="status">
+          <MapPin size={18} />
+          <span>Select a point on the map to add a location.</span>
+        </div>
+      ) : null}
+
       {isLocationPromptOpen && telegramUser ? (
         <LocationOnboardingPrompt
           isLocating={isLocating}
@@ -632,6 +649,7 @@ export function HomePage() {
           isSavingProfile={isProfileSaving}
           profileError={profileError}
           onSaveProfile={submitProfile}
+          onAddLocationClick={handleAddLocationFromProfile}
           onClose={() => setIsProfileOpen(false)}
         />
       ) : null}
@@ -678,8 +696,16 @@ export function HomePage() {
           <TapLocationSheet
             isOpen={isTapSheetOpen}
             coordinates={pickedCoordinates}
-            onClose={() => setIsTapSheetOpen(false)}
-            onAddLocation={() => { setIsTapSheetOpen(false); setIsModalOpen(true); }}
+            onClose={() => {
+              setIsTapSheetOpen(false);
+              setPickedCoordinates(null);
+              setIsAwaitingMapPickForNewLocation(false);
+            }}
+            onAddLocation={() => {
+              setIsTapSheetOpen(false);
+              setIsAwaitingMapPickForNewLocation(false);
+              setIsModalOpen(true);
+            }}
           />
 
           {/* Add location form sheet */}
@@ -687,7 +713,11 @@ export function HomePage() {
             isOpen={isModalOpen}
             coordinates={pickedCoordinates}
             isSubmitting={isSubmitting}
-            onClose={() => { setIsModalOpen(false); setPickedCoordinates(null); }}
+            onClose={() => {
+              setIsModalOpen(false);
+              setPickedCoordinates(null);
+              setIsAwaitingMapPickForNewLocation(false);
+            }}
             onSubmit={handleCreateLocation}
           />
         </>

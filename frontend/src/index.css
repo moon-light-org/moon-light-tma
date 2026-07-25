@@ -271,16 +271,6 @@ button {
   transform: scale(0.94);
 }
 
-.map-btn--accent {
-  background: var(--c-accent);
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(26, 115, 232, 0.40);
-}
-
-.map-btn--accent:active {
-  box-shadow: 0 1px 4px rgba(26, 115, 232, 0.30);
-}
-
 /* ─── Error Toast ────────────────────────────────────────────── */
 .error-toast {
   position: absolute;
@@ -305,6 +295,10 @@ button {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+}
+
+.error-toast--info {
+  background: rgba(15, 23, 42, 0.92);
 }
 
 @keyframes slideUp {
@@ -1141,6 +1135,56 @@ code {
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text);
+}
+
+.profile-sheet__actions {
+  padding-bottom: 14px;
+}
+
+.profile-sheet__action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(26, 115, 232, 0.18);
+  background: rgba(26, 115, 232, 0.08);
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-sheet__action:active {
+  transform: scale(0.99);
+}
+
+.profile-sheet__action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: var(--c-accent);
+  flex-shrink: 0;
+}
+
+.profile-sheet__action-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-sheet__action-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-sheet__action-copy span {
+  font-size: 12px;
+  color: var(--c-text2);
 }
 
 .search-sheet__empty {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, CalendarDays, MapPin } from "lucide-react";
+import { X, CalendarDays, MapPin, Plus } from "lucide-react";
 import type { TelegramUser, UserProfile } from "../../entities/user/model/types";
 
 type ProfileSheetProps = {
@@ -11,6 +11,7 @@ type ProfileSheetProps = {
   isSavingProfile: boolean;
   profileError: string | null;
   onSaveProfile: (nickname: string) => Promise<void>;
+  onAddLocationClick: () => void;
   onClose: () => void;
 };
 
@@ -23,6 +24,7 @@ export function ProfileSheet({
   isSavingProfile,
   profileError,
   onSaveProfile,
+  onAddLocationClick,
   onClose,
 }: ProfileSheetProps) {
   const [nicknameInput, setNicknameInput] = useState(userProfile?.nickname ?? "");
@@ -100,6 +102,18 @@ export function ProfileSheet({
                 <strong className="profile-stat__value">{placesAddedCount}</strong>
               </div>
             </div>
+          </div>
+
+          <div className="profile-sheet__actions">
+            <button type="button" className="profile-sheet__action" onClick={onAddLocationClick}>
+              <span className="profile-sheet__action-icon" aria-hidden="true">
+                <Plus size={16} />
+              </span>
+              <span className="profile-sheet__action-copy">
+                <strong>Add location</strong>
+                <span>Select a point on the map to start</span>
+              </span>
+            </button>
           </div>
 
           <div className="profile-sheet__edit">
