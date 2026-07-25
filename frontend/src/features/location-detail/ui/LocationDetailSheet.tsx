@@ -151,19 +151,35 @@ export function LocationDetailSheet({
           ) : null}
 
           {tab === "reviews" ? (
-            <div>
-              <div className="location-detail-toolbar">
-                <h4 className="location-detail-section-title">Community reviews</h4>
+            <div className="location-detail-review-section">
+              <section className="location-detail-review-card">
+                <span className="location-detail-review-label">Community feedback</span>
+                <h4 className="location-detail-section-title">Reviews from other users</h4>
+                <p className="location-detail-review-copy">See what other Bitcoiners are saying before you add your own take.</p>
+                <div className="location-detail-review-summary">
+                  <div className="location-detail-review-stat">
+                    <strong>{avgRating ?? "-"}</strong>
+                    <span>Average rating</span>
+                  </div>
+                  <div className="location-detail-review-stat">
+                    <strong>{reviews.length}</strong>
+                    <span>{reviews.length === 1 ? "Review" : "Reviews"}</span>
+                  </div>
+                </div>
                 <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
                   Add review
                 </button>
+              </section>
+
+              <div className="location-detail-toolbar">
+                <h5 className="location-detail-list-title">Latest reviews</h5>
               </div>
               {reviewsLoading ? <p>Loading reviews...</p> : null}
-              {!reviewsLoading && reviews.length === 0 ? <p>No reviews yet.</p> : null}
+              {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No reviews yet.</p> : null}
               <div className="location-review-list">
                 {reviews.map((review) => (
                   <article key={review.id} className="location-review-item">
-                    <div>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
+                    <div className="location-review-item__stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
                     {review.text ? <p>{review.text}</p> : <p className="muted">No text review</p>}
                   </article>
                 ))}

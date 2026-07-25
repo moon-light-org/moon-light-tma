@@ -613,14 +613,93 @@ button {
   margin-bottom: 12px;
 }
 
+.location-detail-review-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.location-detail-review-card {
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(135deg, rgba(26, 115, 232, 0.18), rgba(242, 153, 0, 0.18)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+}
+
+.location-detail-review-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--c-orange);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .location-detail-section-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
+  color: var(--c-text);
+  line-height: 1.05;
+}
+
+.location-detail-review-copy {
+  margin-top: 8px;
+  color: var(--c-text2);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.location-detail-review-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+
+.location-detail-review-stat {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f6f8fc;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.location-detail-review-stat strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--c-text);
 }
 
+.location-detail-review-stat span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--c-text2);
+}
+
 .location-detail-review-trigger {
-  min-width: 112px;
+  width: 100%;
+}
+
+.location-detail-list-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.location-detail-review-empty {
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: var(--c-text2);
+  text-align: center;
 }
 
 .location-gallery-main {
@@ -712,14 +791,22 @@ button {
 }
 
 .location-review-item {
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 14px 14px 13px;
   background: #fff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.location-review-item__stars {
+  color: #f59e0b;
+  font-size: 15px;
+  letter-spacing: 0.03em;
 }
 
 .location-review-item p {
   margin-top: 6px;
+  line-height: 1.45;
 }
 
 .muted {
