@@ -1,18 +1,29 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Shield, Trash2, UserCog, X } from "lucide-react";
-import type { Location, LocationReview } from "../../entities/location/model/types";
+import type { AdminLocationReport, Location, LocationReportReason, LocationReview } from "../../entities/location/model/types";
 import type { UserProfile } from "../../entities/user/model/types";
 
-type TabKey = "members" | "locations";
+type TabKey = "members" | "locations" | "reports";
+
+const reportReasonLabels: Record<LocationReportReason, string> = {
+  missing: "Location doesn't exist",
+  no_lightning_or_btc: "Doesn't accept Lightning and BTC",
+  illegal_service: "Illegal service",
+  poor_service: "Poor quality service",
+  other: "Other",
+};
 
 type AdminSheetProps = {
   isOpen: boolean;
   members: UserProfile[];
   locations: Location[];
+  reports: AdminLocationReport[];
   selectedLocation: Location | null;
   selectedLocationReviews: LocationReview[];
   loadingMembers: boolean;
   loadingLocations: boolean;
+  loadingReports: boolean;
+  reportError: string | null;
   loadingReviews: boolean;
   busyUserId: number | null;
   deletingLocationId: number | null;
@@ -30,10 +41,13 @@ export function AdminSheet({
   isOpen,
   members,
   locations,
+  reports,
   selectedLocation,
   selectedLocationReviews,
   loadingMembers,
   loadingLocations,
+  loadingReports,
+  reportError,
   loadingReviews,
   busyUserId,
   deletingLocationId,
@@ -75,6 +89,7 @@ export function AdminSheet({
           <button type="button" onClick={() => setTab("locations")} className={tab === "locations" ? "active" : ""}>
             Locations
           </button>
+          <button type="button" onClick={() => setTab("reports")} className={tab === "reports" ? "active" : ""}>Reports</button>
         </div>
 
         <div className="sheet-body admin-sheet__body">
@@ -191,6 +206,27 @@ export function AdminSheet({
                   </div>
                 </div>
               )}
+            </div>
+          ) : null}
+
+          {tab === "reports" ? (
+            <div className="admin-list">
+              {loadingReports ? <p>Loading reports...</p> : null}
+              {reportError ? (
+                <p className="admin-error">
+                  <Shield size={14} />
+                  {reportError}
+                </p>
+              ) : null}
+              {!loadingReports && !reportError && reports.length === 0 ? <p>No reports found.</p> : null}
+              {reports.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((report) => (
+                <article key={report.id} className="location-review-item">
+                  <strong>{report.location_name}</strong>
+                  <p>{report.reasons.map((reason) => reportReasonLabels[reason]).join(", ")}</p>
+                  {report.text ? <p>{report.text}</p> : null}
+                  <p className="muted">{new Date(report.created_at).toLocaleString()}</p>
+                </article>
+              ))}
             </div>
           ) : null}
 

@@ -164,12 +164,14 @@ export function LocationDetailSheet({
                     <span>{reviews.length === 1 ? "Review" : "Reviews"}</span>
                   </div>
                 </div>
-                <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
-                  Add review
-                </button>
-                <button type="button" className="btn-secondary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
-                  Report location
-                </button>
+                <div className="location-detail-contribution-actions">
+                  <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
+                    Add review
+                  </button>
+                  <button type="button" className="btn-secondary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
+                    Report location
+                  </button>
+                </div>
               </section>
 
               <div className="location-detail-toolbar">

@@ -32,7 +32,7 @@ export function ReportFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
   return <div className="onboarding-shell" role="dialog" aria-modal="true" aria-label="Report location"><section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
     <button type="button" className="sheet-close review-flow-close" onClick={close} aria-label="Close report flow"><X size={16} /></button>
     {success ? <><span className="onboarding-eyebrow">Report sent</span><h1>Thanks for letting us know</h1><p>Your report has been submitted.</p></> : <><span className="onboarding-eyebrow">Report location</span><h1>What is wrong with this place?</h1><p>Select every reason that applies.</p>
-      {reasons.map((reason) => <label key={reason.value} className="btn-secondary"><input type="checkbox" checked={selectedReasons.includes(reason.value)} onChange={() => toggle(reason.value)} /> {reason.label}</label>)}
+      {reasons.map((reason) => <label key={reason.value} className="btn-secondary report-flow-reason"><input type="checkbox" checked={selectedReasons.includes(reason.value)} onChange={() => toggle(reason.value)} /> <span>{reason.label}</span></label>)}
       <textarea className="onboarding-input review-flow-textarea" placeholder="Add details (optional)" value={text} onChange={(event) => setText(event.target.value)} maxLength={600} />
       <button type="button" className="btn-primary onboarding-submit" disabled={isSubmitting} onClick={submit}>{isSubmitting ? "Sending..." : "Submit report"}</button></>}
     {localError ? <p className="onboarding-error">{localError}</p> : null}{error ? <p className="onboarding-error">{error}</p> : null}

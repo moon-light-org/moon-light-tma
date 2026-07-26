@@ -686,6 +686,19 @@ button {
   width: 100%;
 }
 
+.location-detail-contribution-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.location-detail-contribution-actions .location-detail-review-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .location-detail-list-title {
   font-size: 14px;
   font-weight: 700;
@@ -843,6 +856,25 @@ button {
 .review-flow-textarea {
   min-height: 120px;
   resize: none;
+}
+
+.report-flow-reason {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.report-flow-reason span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 360px) {
+  .location-detail-contribution-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Form ───────────────────────────────────────────────────── */

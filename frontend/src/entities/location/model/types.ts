@@ -62,3 +62,12 @@ export type CreateLocationReportPayload = {
   reasons: LocationReportReason[];
   text: string | null;
 };
+
+export type AdminLocationReport = {
+  id: number;
+  location_id: number;
+  location_name: string;
+  reasons: LocationReportReason[];
+  text: string | null;
+  created_at: string;
+};

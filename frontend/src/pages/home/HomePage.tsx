@@ -8,6 +8,7 @@ import {
   fetchLocationPhotos,
   fetchLocationReviews,
   fetchAdminLocations,
+  fetchAdminLocationReports,
   fetchAdminLocationReviews,
   deleteAdminLocation,
   deleteAdminReview,
@@ -16,6 +17,7 @@ import type {
   CreateLocationPayload,
   CreateLocationReportPayload,
   CreateLocationReviewPayload,
+  AdminLocationReport,
   Location,
   LocationCategory,
   LocationPhoto,
@@ -94,10 +96,13 @@ export function HomePage() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminMembers, setAdminMembers] = useState<UserProfile[]>([]);
   const [adminLocations, setAdminLocations] = useState<Location[]>([]);
+  const [adminReports, setAdminReports] = useState<AdminLocationReport[]>([]);
+  const [adminReportsError, setAdminReportsError] = useState<string | null>(null);
   const [adminSelectedLocation, setAdminSelectedLocation] = useState<Location | null>(null);
   const [adminLocationReviews, setAdminLocationReviews] = useState<LocationReview[]>([]);
   const [adminLoadingMembers, setAdminLoadingMembers] = useState(false);
   const [adminLoadingLocations, setAdminLoadingLocations] = useState(false);
+  const [adminLoadingReports, setAdminLoadingReports] = useState(false);
   const [adminLoadingReviews, setAdminLoadingReviews] = useState(false);
   const [adminBusyUserId, setAdminBusyUserId] = useState<number | null>(null);
   const [adminDeletingLocationId, setAdminDeletingLocationId] = useState<number | null>(null);
@@ -460,20 +465,42 @@ export function HomePage() {
   const openAdminPanel = async () => {
     setIsAdminOpen(true);
     setAdminError(null);
+    setAdminReportsError(null);
     setAdminLoadingMembers(true);
     setAdminLoadingLocations(true);
+    setAdminLoadingReports(true);
     try {
-      const [members, locationsData] = await Promise.all([
+      const [membersResult, locationsResult, reportsResult] = await Promise.allSettled([
         fetchAdminMembers(telegramInitData),
         fetchAdminLocations(telegramInitData),
+        fetchAdminLocationReports(telegramInitData),
       ]);
-      setAdminMembers(members);
-      setAdminLocations(locationsData);
-    } catch (err) {
-      setAdminError(err instanceof Error ? err.message : "Failed to load admin data");
+      const errors: string[] = [];
+
+      if (membersResult.status === "fulfilled") {
+        setAdminMembers(membersResult.value);
+      } else {
+        errors.push(membersResult.reason instanceof Error ? membersResult.reason.message : "Failed to load members");
+      }
+
+      if (locationsResult.status === "fulfilled") {
+        setAdminLocations(locationsResult.value);
+      } else {
+        errors.push(locationsResult.reason instanceof Error ? locationsResult.reason.message : "Failed to load locations");
+      }
+
+      if (reportsResult.status === "fulfilled") {
+        setAdminReports(reportsResult.value);
+      } else {
+        setAdminReports([]);
+        setAdminReportsError(reportsResult.reason instanceof Error ? reportsResult.reason.message : "Failed to load reports");
+      }
+
+      setAdminError(errors[0] ?? null);
     } finally {
       setAdminLoadingMembers(false);
       setAdminLoadingLocations(false);
+      setAdminLoadingReports(false);
     }
   };
 
@@ -664,10 +691,13 @@ export function HomePage() {
         isOpen={isAdminOpen}
         members={adminMembers}
         locations={adminLocations}
+        reports={adminReports}
         selectedLocation={adminSelectedLocation}
         selectedLocationReviews={adminLocationReviews}
         loadingMembers={adminLoadingMembers}
         loadingLocations={adminLoadingLocations}
+        loadingReports={adminLoadingReports}
+        reportError={adminReportsError}
         loadingReviews={adminLoadingReviews}
         busyUserId={adminBusyUserId}
         deletingLocationId={adminDeletingLocationId}

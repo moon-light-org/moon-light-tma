@@ -1,4 +1,5 @@
 import type {
+  AdminLocationReport,
   CreateLocationPayload,
   CreateLocationReportPayload,
   CreateLocationReviewPayload,
@@ -141,6 +142,12 @@ export async function fetchAdminLocations(
 ): Promise<Location[]> {
   const response = await httpJson<ApiLocation[]>("/api/admin/locations", { telegramInitData });
   return response.map(normalizeLocation).filter((location): location is Location => location !== null);
+}
+
+export async function fetchAdminLocationReports(
+  telegramInitData: string | null
+): Promise<AdminLocationReport[]> {
+  return httpJson<AdminLocationReport[]>("/api/admin/reports", { telegramInitData });
 }
 
 export async function fetchAdminLocationReviews(
