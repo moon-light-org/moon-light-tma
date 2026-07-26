@@ -6,8 +6,11 @@ const onboarding = readFileSync("src/widgets/mobile-home/OnboardingFlow.tsx", "u
 const addLocation = readFileSync("src/features/add-location/ui/AddLocationModal.tsx", "utf8");
 const locationDetail = readFileSync("src/features/location-detail/ui/LocationDetailSheet.tsx", "utf8");
 const reviewFlow = readFileSync("src/features/location-detail/ui/ReviewFlowModal.tsx", "utf8");
+const reportFlow = readFileSync("src/features/location-detail/ui/ReportFlowModal.tsx", "utf8");
 const homePage = readFileSync("src/pages/home/HomePage.tsx", "utf8");
+const locationApi = readFileSync("src/entities/location/api/locationApi.ts", "utf8");
 const locationMap = readFileSync("src/widgets/location-map/LocationMap.tsx", "utf8");
+const adminSheet = readFileSync("src/widgets/mobile-home/AdminSheet.tsx", "utf8");
 const lotties = readFileSync("src/shared/ui/lotties.ts", "utf8");
 const userApi = readFileSync("src/entities/user/api/userApi.ts", "utf8");
 
@@ -35,6 +38,15 @@ assert.match(lotties, /16f1a74c-cf0f-4fc2-8742-c0492417d692\/E5OQBtRu8p\.lottie/
 assert.match(lotties, /5e17fba5-56fb-42c0-8266-72086c33efba\/qW13dBgqmt\.lottie/);
 assert.match(reviewFlow, /window\.setTimeout/);
 assert.match(reviewFlow, /2000/);
+assert.match(reviewFlow, /"payment" \| "wallet" \| "rating" \| "comment" \| "success"/);
+assert.match(reviewFlow, /Accepts Lightning/);
+assert.match(reviewFlow, /Skip/);
+assert.match(reviewFlow, /void submit\(null\)/);
+assert.match(reportFlow, /type="checkbox"/);
+assert.match(reportFlow, /Location doesn't exist/);
+assert.match(reportFlow, /Poor quality service/);
+assert.match(locationApi, /export async function createLocationReport/);
+assert.match(locationApi, /body: \{ paymentStatus, wallet, rating, text \}/);
 
 assert.match(homePage, /const \[userLocation,\s*setUserLocation\]/);
 assert.match(homePage, /setUserLocation\(coords\)/);
@@ -46,6 +58,12 @@ assert.match(homePage, /clearCachedProfile/);
 assert.match(homePage, /const cachedProfile = readCachedProfile\(telegramUserId\)/);
 assert.match(homePage, /const user = await getCurrentUser\(telegramInitData\)/);
 assert.match(homePage, /if \(cachedProfile && !user\)/);
+assert.match(homePage, /handleCreateLocationReport/);
+assert.match(homePage, /createLocationReport\(selectedLocation\.id/);
+assert.match(locationDetail, /Report location/);
+assert.match(locationDetail, /ReportFlowModal/);
+assert.match(locationDetail, /review\.payment_status/);
+assert.match(adminSheet, /review\.rating !== null/);
 
 assert.match(locationMap, /userLocation\?: \{ latitude: number; longitude: number \} \| null/);
 assert.match(locationMap, /USER_LOCATION_SOURCE_ID/);

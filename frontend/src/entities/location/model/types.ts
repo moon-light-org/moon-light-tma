@@ -1,4 +1,7 @@
 export type LocationCategory = "grocery" | "restaurant-bar" | "other";
+export type LocationPaymentStatus = "lightning" | "btc_only" | "neither";
+export type LocationWallet = "wallet_of_satoshi" | "muun" | "breez" | "blw" | "eclair" | "zap" | "phoenix" | "blue_wallet" | "other";
+export type LocationReportReason = "missing" | "no_lightning_or_btc" | "illegal_service" | "poor_service" | "other";
 
 export type Location = {
   id: number;
@@ -41,7 +44,21 @@ export type LocationReview = {
   id: number;
   location_id: number;
   user_id: number | null;
-  rating: number;
+  payment_status: LocationPaymentStatus;
+  wallet: LocationWallet | null;
+  rating: number | null;
   text: string | null;
   created_at: string;
+};
+
+export type CreateLocationReviewPayload = {
+  paymentStatus: LocationPaymentStatus;
+  wallet: LocationWallet | null;
+  rating: number | null;
+  text: string | null;
+};
+
+export type CreateLocationReportPayload = {
+  reasons: LocationReportReason[];
+  text: string | null;
 };

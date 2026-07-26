@@ -4,6 +4,7 @@ import {
   fetchLocations,
   createLocation,
   createLocationReview,
+  createLocationReport,
   fetchLocationPhotos,
   fetchLocationReviews,
   fetchAdminLocations,
@@ -13,6 +14,8 @@ import {
 } from "../../entities/location/api/locationApi";
 import type {
   CreateLocationPayload,
+  CreateLocationReportPayload,
+  CreateLocationReviewPayload,
   Location,
   LocationCategory,
   LocationPhoto,
@@ -386,12 +389,16 @@ export function HomePage() {
     };
   }, [selectedLocation, telegramInitData]);
 
-  const handleCreateLocationReview = async (rating: number, text: string | null) => {
+  const handleCreateLocationReview = async (payload: CreateLocationReviewPayload) => {
     if (!selectedLocation) {
       return;
     }
-    const created = await createLocationReview(selectedLocation.id, rating, text, telegramInitData);
+    const created = await createLocationReview(selectedLocation.id, payload, telegramInitData);
     setSelectedLocationReviews((prev) => [created, ...prev]);
+  };
+  const handleCreateLocationReport = async (payload: CreateLocationReportPayload) => {
+    if (!selectedLocation) return;
+    await createLocationReport(selectedLocation.id, payload, telegramInitData);
   };
 
   const finishLocationOnboarding = () => {
@@ -606,6 +613,7 @@ export function HomePage() {
             canContribute={Boolean(telegramUser && userProfile)}
             onClose={() => setSelectedLocation(null)}
             onCreateReview={handleCreateLocationReview}
+            onCreateReport={handleCreateLocationReport}
           />
 
           {/* Search sheet */}

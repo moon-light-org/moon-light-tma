@@ -1,5 +1,7 @@
 import type {
   CreateLocationPayload,
+  CreateLocationReportPayload,
+  CreateLocationReviewPayload,
   Location,
   LocationPhoto,
   LocationReview,
@@ -112,14 +114,25 @@ export async function fetchLocationReviews(
 
 export async function createLocationReview(
   locationId: number,
-  rating: number,
-  text: string | null,
+  { paymentStatus, wallet, rating, text }: CreateLocationReviewPayload,
   telegramInitData: string | null
 ): Promise<LocationReview> {
   return httpJson<LocationReview>(`/api/locations/${locationId}/reviews`, {
     method: "POST",
     telegramInitData,
-    body: { rating, text },
+    body: { paymentStatus, wallet, rating, text },
+  });
+}
+
+export async function createLocationReport(
+  locationId: number,
+  payload: CreateLocationReportPayload,
+  telegramInitData: string | null
+): Promise<void> {
+  await httpJson<void>(`/api/locations/${locationId}/reports`, {
+    method: "POST",
+    telegramInitData,
+    body: payload,
   });
 }
 

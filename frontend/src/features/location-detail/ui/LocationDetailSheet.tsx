@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import type { Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
+import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 import { ReviewFlowModal } from "./ReviewFlowModal";
+import { ReportFlowModal } from "./ReportFlowModal";
 
 type TabKey = "description" | "photos" | "reviews";
 
@@ -14,7 +15,8 @@ type LocationDetailSheetProps = {
   reviewsLoading: boolean;
   canContribute: boolean;
   onClose: () => void;
-  onCreateReview: (rating: number, text: string | null) => Promise<void>;
+  onCreateReview: (payload: CreateLocationReviewPayload) => Promise<void>;
+  onCreateReport: (payload: CreateLocationReportPayload) => Promise<void>;
 };
 
 export function LocationDetailSheet({
@@ -27,20 +29,15 @@ export function LocationDetailSheet({
   canContribute,
   onClose,
   onCreateReview,
+  onCreateReport,
 }: LocationDetailSheetProps) {
   const [tab, setTab] = useState<TabKey>("description");
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [isReviewFlowOpen, setIsReviewFlowOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isReportFlowOpen, setIsReportFlowOpen] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const avgRating = useMemo(() => {
-    if (!reviews.length) {
-      return null;
-    }
-    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
-    return (total / reviews.length).toFixed(1);
-  }, [reviews]);
   const orderedPhotos = useMemo(() => {
     const list = [...photos];
     if (location?.image_url) {
@@ -66,6 +63,7 @@ export function LocationDetailSheet({
   useEffect(() => {
     if (!isOpen) {
       setIsReviewFlowOpen(false);
+      setIsReportFlowOpen(false);
       setIsSubmittingReview(false);
       setError(null);
     }
@@ -75,17 +73,22 @@ export function LocationDetailSheet({
     return null;
   }
 
-  const handleSubmitReview = async (rating: number, text: string | null) => {
+  const handleSubmitReview = async (payload: CreateLocationReviewPayload) => {
     try {
       setError(null);
       setIsSubmittingReview(true);
-      await onCreateReview(rating, text);
+      await onCreateReview(payload);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add review");
       throw err;
     } finally {
       setIsSubmittingReview(false);
     }
+  };
+  const handleSubmitReport = async (payload: CreateLocationReportPayload) => {
+    try { setError(null); setIsSubmittingReport(true); await onCreateReport(payload); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed to report location"); throw err; }
+    finally { setIsSubmittingReport(false); }
   };
 
   return (
@@ -104,7 +107,6 @@ export function LocationDetailSheet({
 
         <p className="sheet-coords">
           {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-          {avgRating ? <span className="location-detail-rating">★ {avgRating}</span> : null}
         </p>
 
         <div className="location-detail-tabs" role="tablist" aria-label="Location detail tabs">
@@ -158,16 +160,15 @@ export function LocationDetailSheet({
                 <p className="location-detail-review-copy">See what other Bitcoiners are saying before you add your own take.</p>
                 <div className="location-detail-review-summary">
                   <div className="location-detail-review-stat">
-                    <strong>{avgRating ?? "-"}</strong>
-                    <span>Average rating</span>
-                  </div>
-                  <div className="location-detail-review-stat">
                     <strong>{reviews.length}</strong>
                     <span>{reviews.length === 1 ? "Review" : "Reviews"}</span>
                   </div>
                 </div>
                 <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
                   Add review
+                </button>
+                <button type="button" className="btn-secondary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
+                  Report location
                 </button>
               </section>
 
@@ -179,8 +180,10 @@ export function LocationDetailSheet({
               <div className="location-review-list">
                 {reviews.map((review) => (
                   <article key={review.id} className="location-review-item">
-                    <div className="location-review-item__stars">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
-                    {review.text ? <p>{review.text}</p> : <p className="muted">No text review</p>}
+                    <strong>{review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : "Accepts neither Lightning nor BTC"}</strong>
+                    {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
+                    {review.rating !== null ? <p>Benefit rating: {review.rating}/3</p> : null}
+                    {review.text ? <p>{review.text}</p> : null}
                   </article>
                 ))}
               </div>
@@ -199,6 +202,13 @@ export function LocationDetailSheet({
             setError(null);
           }}
           onSubmit={handleSubmitReview}
+        />
+        <ReportFlowModal
+          isOpen={isReportFlowOpen}
+          isSubmitting={isSubmittingReport}
+          error={error}
+          onClose={() => { setIsReportFlowOpen(false); setError(null); }}
+          onSubmit={handleSubmitReport}
         />
       </div>
     </div>

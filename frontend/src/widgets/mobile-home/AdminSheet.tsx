@@ -168,7 +168,7 @@ export function AdminSheet({
                     {selectedLocationReviews.map((review) => (
                       <article key={review.id} className="location-review-item">
                         <div className="admin-review-head">
-                          <span>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                          <span>{review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : "Accepts neither Lightning nor BTC"}</span>
                           <button
                             type="button"
                             className="btn-icon-danger btn-icon-danger--small"
@@ -184,6 +184,7 @@ export function AdminSheet({
                             )}
                           </button>
                         </div>
+                        {review.rating !== null ? <p>Benefit rating: {review.rating}/3</p> : null}
                         {review.text ? <p>{review.text}</p> : <p className="muted">No text review</p>}
                       </article>
                     ))}

@@ -1,126 +1,83 @@
-import { useEffect, useMemo, useState } from "react";
-import { Star, X } from "lucide-react";
-import { REVIEW_COMPOSE_LOTTIE_SRC, REVIEW_SUCCESS_LOTTIE_SRC } from "../../../shared/ui/lotties";
+import { useEffect, useEffectEvent, useState } from "react";
+import { X } from "lucide-react";
+import type { CreateLocationReviewPayload, LocationPaymentStatus, LocationWallet } from "../../../entities/location/model/types";
+import { REVIEW_SUCCESS_LOTTIE_SRC } from "../../../shared/ui/lotties";
 
 type ReviewFlowModalProps = {
   isOpen: boolean;
   isSubmitting: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (rating: number, text: string | null) => Promise<void>;
+  onSubmit: (payload: CreateLocationReviewPayload) => Promise<void>;
 };
 
-export function ReviewFlowModal({
-  isOpen,
-  isSubmitting,
-  error,
-  onClose,
-  onSubmit,
-}: ReviewFlowModalProps) {
-  const [rating, setRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  const [step, setStep] = useState<"compose" | "success">("compose");
+const paymentOptions: { value: LocationPaymentStatus; label: string }[] = [
+  { value: "lightning", label: "Accepts Lightning" },
+  { value: "btc_only", label: "Accepts only BTC" },
+  { value: "neither", label: "Accepts neither Lightning nor BTC" },
+];
+const walletOptions: { value: LocationWallet; label: string }[] = [
+  { value: "wallet_of_satoshi", label: "Wallet of Satoshi" }, { value: "muun", label: "Muun" },
+  { value: "breez", label: "Breez" }, { value: "blw", label: "BLW" }, { value: "eclair", label: "Eclair" },
+  { value: "zap", label: "Zap" }, { value: "phoenix", label: "Phoenix" }, { value: "blue_wallet", label: "Blue Wallet" },
+  { value: "other", label: "Other" },
+];
+const ratingOptions = [
+  { value: 0, label: "0", copy: "Lightning only, no other benefit" },
+  { value: 1, label: "1", copy: "Decent service or 10% promo" },
+  { value: 2, label: "2", copy: "Decent service and 10-20% promo" },
+  { value: 3, label: "3", copy: "Excellent service and promo, or decent service with more than 20% promo" },
+];
+
+export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit }: ReviewFlowModalProps) {
+  const [step, setStep] = useState<"payment" | "wallet" | "rating" | "comment" | "success">("payment");
+  const [paymentStatus, setPaymentStatus] = useState<LocationPaymentStatus | null>(null);
+  const [wallet, setWallet] = useState<LocationWallet | null>(null);
+  const [rating, setRating] = useState<number | null>(null);
+  const [text, setText] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const normalizedReviewText = useMemo(() => {
-    const trimmed = reviewText.trim();
-    return trimmed.length ? trimmed : null;
-  }, [reviewText]);
-
+  const close = () => {
+    setStep("payment"); setPaymentStatus(null); setWallet(null); setRating(null); setText(""); setLocalError(null); onClose();
+  };
+  const closeAfterSuccess = useEffectEvent(close);
   useEffect(() => {
-    if (!isOpen) {
-      setRating(5);
-      setReviewText("");
-      setStep("compose");
-      setLocalError(null);
-    }
-  }, [isOpen]);
+    if (!isOpen || step !== "success") return;
+    const timeoutId = window.setTimeout(closeAfterSuccess, 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, step]);
 
-  useEffect(() => {
-    if (!isOpen || step !== "success") {
-      return;
-    }
-    const timeoutId = window.setTimeout(() => {
-      onClose();
-    }, 2000);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isOpen, onClose, step]);
-
-  if (!isOpen) {
-    return null;
-  }
-
-  const handleSubmit = async () => {
-    if (!rating || rating < 1 || rating > 5) {
-      setLocalError("Please select a rating from 1 to 5.");
-      return;
-    }
-
+  if (!isOpen) return null;
+  const next = (nextStep: "wallet" | "rating" | "comment") => {
+    if (step === "payment" && !paymentStatus) { setLocalError("Choose the payment status to continue."); return; }
+    setLocalError(null); setStep(nextStep);
+  };
+  const submit = async (comment = text.trim() || null) => {
+    if (!paymentStatus) { setLocalError("Choose the payment status to submit."); return; }
     try {
       setLocalError(null);
-      await onSubmit(rating, normalizedReviewText);
+      await onSubmit({ paymentStatus, wallet, rating, text: comment });
       setStep("success");
-    } catch {
-      // Parent sets and displays the error message.
-    }
+    } catch { /* The parent renders request errors. */ }
   };
 
-  return (
-    <div className="onboarding-shell" role="dialog" aria-modal="true" aria-label="Add review">
-      <section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="sheet-close review-flow-close" onClick={onClose} aria-label="Close review flow">
-          <X size={16} />
-        </button>
-
-        {step === "compose" ? (
-          <>
-            <dotlottie-wc
-              className="onboarding-lottie onboarding-lottie--review"
-              src={REVIEW_COMPOSE_LOTTIE_SRC}
-              autoplay
-              loop
-              aria-hidden="true"
-            />
-            <span className="onboarding-eyebrow">Share feedback</span>
-            <h1>How was this place?</h1>
-            <p>Leave a quick rating and an optional comment to help the next Bitcoiner.</p>
-            <div className="star-input star-input--large" aria-label="Review rating">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button key={value} type="button" onClick={() => setRating(value)} className={value <= rating ? "active" : ""} aria-label={`${value} star`}>
-                  <Star size={24} fill={value <= rating ? "currentColor" : "none"} />
-                </button>
-              ))}
-            </div>
-            <textarea
-              className="onboarding-input review-flow-textarea"
-              placeholder="Write a short review"
-              value={reviewText}
-              onChange={(event) => setReviewText(event.target.value)}
-              maxLength={600}
-            />
-            {localError ? <p className="onboarding-error">{localError}</p> : null}
-            {error ? <p className="onboarding-error">{error}</p> : null}
-            <button type="button" className="btn-primary onboarding-submit" disabled={isSubmitting} onClick={handleSubmit}>
-              {isSubmitting ? "Sending..." : "Submit review"}
-            </button>
-          </>
-        ) : (
-          <>
-            <dotlottie-wc
-              className="onboarding-lottie onboarding-lottie--review-success"
-              src={REVIEW_SUCCESS_LOTTIE_SRC}
-              autoplay
-              loop
-              aria-hidden="true"
-            />
-            <span className="onboarding-eyebrow">Review added</span>
-            <h1>Thanks for the feedback</h1>
-            <p>Your review is now live. This closes automatically in a moment.</p>
-          </>
-        )}
-      </section>
-    </div>
-  );
+  return <div className="onboarding-shell" role="dialog" aria-modal="true" aria-label="Add review">
+    <section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
+      <button type="button" className="sheet-close review-flow-close" onClick={close} aria-label="Close review flow"><X size={16} /></button>
+      {step === "payment" ? <><span className="onboarding-eyebrow">Step 1 of 4</span><h1>Payment status</h1><p>How can you pay at this place?</p>
+        {paymentOptions.map((option) => <button key={option.value} type="button" className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => setPaymentStatus(option.value)}>{option.label}</button>)}
+        <button type="button" className="btn-primary onboarding-submit" onClick={() => next("wallet")}>Continue</button></> : null}
+      {step === "wallet" ? <><span className="onboarding-eyebrow">Step 2 of 4</span><h1>Which wallet did you use?</h1><p>This is optional.</p>
+        {walletOptions.map((option) => <button key={option.value} type="button" className={`btn-secondary ${wallet === option.value ? "active" : ""}`} onClick={() => setWallet(option.value)}>{option.label}</button>)}
+        <button type="button" className="btn-primary onboarding-submit" onClick={() => next("rating")}>Continue</button><button type="button" className="btn-secondary" onClick={() => { setWallet(null); next("rating"); }}>Skip</button></> : null}
+      {step === "rating" ? <><span className="onboarding-eyebrow">Step 3 of 4</span><h1>Rate the benefit</h1><p>This is optional.</p>
+        {ratingOptions.map((option) => <button key={option.value} type="button" className={`btn-secondary ${rating === option.value ? "active" : ""}`} onClick={() => setRating(option.value)}><strong>{option.label}</strong> {option.copy}</button>)}
+        <button type="button" className="btn-primary onboarding-submit" onClick={() => next("comment")}>Continue</button><button type="button" className="btn-secondary" onClick={() => { setRating(null); next("comment"); }}>Skip</button></> : null}
+      {step === "comment" ? <><span className="onboarding-eyebrow">Step 4 of 4</span><h1>Add a comment</h1><p>This is optional.</p>
+        <textarea className="onboarding-input review-flow-textarea" placeholder="Write a short review" value={text} onChange={(event) => setText(event.target.value)} maxLength={600} />
+        <button type="button" className="btn-primary onboarding-submit" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button><button type="button" className="btn-secondary" disabled={isSubmitting} onClick={() => { setText(""); void submit(null); }}>Skip</button></> : null}
+      {step === "success" ? <><dotlottie-wc className="onboarding-lottie onboarding-lottie--review-success" src={REVIEW_SUCCESS_LOTTIE_SRC} autoplay loop aria-hidden="true" /><span className="onboarding-eyebrow">Review added</span><h1>Thanks for the feedback</h1><p>Your review is now live. This closes automatically in a moment.</p></> : null}
+      {localError ? <p className="onboarding-error">{localError}</p> : null}{error ? <p className="onboarding-error">{error}</p> : null}
+    </section>
+  </div>;
 }
