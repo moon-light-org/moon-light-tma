@@ -42,7 +42,7 @@ assert.match(reviewFlow, /2000/);
 assert.match(reviewFlow, /"payment" \| "wallet" \| "rating" \| "comment" \| "success"/);
 assert.match(reviewFlow, /Accepts Lightning/);
 assert.match(reviewFlow, /Skip/);
-assert.match(reviewFlow, /void submit\(null\)/);
+assert.match(reviewFlow, /Submit review/);
 assert.doesNotMatch(reviewFlow, />Continue</);
 assert.match(reviewFlow, /onClick=\{\(\) => \{ setPaymentStatus\(option\.value\); setStep\("wallet"\); \}\}/);
 assert.match(reviewFlow, /onClick=\{\(\) => \{ setWallet\(option\.value\); setStep\("rating"\); \}\}/);

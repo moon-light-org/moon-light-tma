@@ -44,7 +44,7 @@ export type LocationReview = {
   id: number;
   location_id: number;
   user_id: number | null;
-  payment_status: LocationPaymentStatus;
+  payment_status: LocationPaymentStatus | null;
   wallet: LocationWallet | null;
   rating: number | null;
   text: string | null;
@@ -52,7 +52,7 @@ export type LocationReview = {
 };
 
 export type CreateLocationReviewPayload = {
-  paymentStatus: LocationPaymentStatus;
+  paymentStatus: LocationPaymentStatus | null;
   wallet: LocationWallet | null;
   rating: number | null;
   text: string | null;

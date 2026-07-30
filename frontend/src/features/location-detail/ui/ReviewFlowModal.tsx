@@ -55,7 +55,6 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
 
   if (!isOpen) return null;
   const submit = async (comment = text.trim() || null) => {
-    if (!paymentStatus) { setLocalError("Choose the payment status to submit."); return; }
     try {
       setLocalError(null);
       await onSubmit({ paymentStatus, wallet, rating, text: comment });
@@ -75,7 +74,7 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
     <section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
       <button type="button" className="sheet-close review-flow-close" disabled={isSubmitting} onClick={close} aria-label="Close review flow"><X size={16} /></button>
       {step === "payment" ? <><span className="onboarding-eyebrow">Step 1 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Payment status</h1><p>How can you pay at this place?</p>
-        {paymentOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => { setPaymentStatus(option.value); setStep("wallet"); }}>{option.label}</button>)}</> : null}
+        {paymentOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => { setPaymentStatus(option.value); setStep("wallet"); }}>{option.label}</button>)}<button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setPaymentStatus(null); setStep("wallet"); }}>Skip</button></> : null}
       {step === "wallet" ? <><span className="onboarding-eyebrow">Step 2 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Which wallet did you use?</h1><p>This is optional.</p>
         <div className="review-flow-wallet-options">{walletOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${wallet === option.value ? "active" : ""}`} onClick={() => { setWallet(option.value); setStep("rating"); }}>{option.label}</button>)}</div>
         <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("payment")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setWallet(null); setStep("rating"); }}>Skip</button></div></> : null}
@@ -85,7 +84,7 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
         <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("wallet")}>Back</button>{rating === null ? <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setRating(null); setRatingDescription(null); setStep("comment"); }}>Skip</button> : <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => setStep("comment")}>Next</button>}</div></> : null}
       {step === "comment" ? <><span className="onboarding-eyebrow">Step 4 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Add a comment</h1><p>This is optional.</p>
         <textarea className="onboarding-input review-flow-textarea" disabled={isSubmitting} placeholder="Write a short review" value={text} onChange={(event) => setText(event.target.value)} maxLength={600} />
-        <button type="button" className="btn-primary onboarding-submit" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button><div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("rating")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setText(""); void submit(null); }}>Skip</button></div></> : null}
+        <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("rating")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button></div></> : null}
       {step === "success" ? <><dotlottie-wc className="onboarding-lottie onboarding-lottie--review-success" src={REVIEW_SUCCESS_LOTTIE_SRC} autoplay loop aria-hidden="true" /><span className="onboarding-eyebrow">Review added</span><h1 ref={stepHeadingRef} tabIndex={-1}>Thanks for the feedback</h1><p>Your review is now live. This closes automatically in a moment.</p></> : null}
       {localError ? <p className="onboarding-error">{localError}</p> : null}{error ? <p className="onboarding-error">{error}</p> : null}
     </section>
