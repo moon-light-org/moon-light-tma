@@ -858,6 +858,52 @@ button {
   resize: none;
 }
 
+.review-flow-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-flow-stars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  gap: 8px;
+}
+
+.review-flow-star {
+  min-width: 48px;
+  min-height: 56px;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: #fff;
+  color: #b0b4bb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.review-flow-star.active {
+  color: #f29900;
+  background: #fff3d9;
+  border-color: rgba(242, 153, 0, 0.55);
+}
+
+.review-flow-star:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.review-flow-rating-description {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff3d9;
+  color: #8f5e00 !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
 .report-flow-reason {
   width: 100%;
   display: flex;
