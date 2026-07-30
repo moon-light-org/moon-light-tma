@@ -864,6 +864,25 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  padding-top: 4px;
+}
+
+.review-flow-back {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--c-text2);
+}
+
+.review-flow-back:active {
+  background: var(--c-surface2);
+  border-color: transparent;
+}
+
+.review-flow-forward {
+  min-height: 50px;
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(26, 115, 232, 0.2);
 }
 
 .review-flow-wallet-options {
