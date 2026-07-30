@@ -70,6 +70,8 @@ assert.match(reviewFlow, /className="btn-secondary review-flow-back"/);
 assert.match(reviewFlow, /className="btn-primary review-flow-forward"/);
 assert.match(styles, /\.review-flow-back\s*\{/);
 assert.match(styles, /\.review-flow-forward\s*\{/);
+assert.match(styles, /\.review-flow-navigation\s*\{[\s\S]*position: sticky/);
+assert.match(styles, /\.report-flow-reason\s*\{[\s\S]*justify-content: flex-start/);
 assert.match(reportFlow, /type="checkbox"/);
 assert.match(reportFlow, /Location doesn't exist/);
 assert.match(reportFlow, /Poor quality service/);

@@ -861,13 +861,20 @@ button {
 }
 
 .review-flow-navigation {
+  position: sticky;
+  bottom: -1px;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  padding-top: 4px;
+  padding: 12px 0 2px;
+  background: #ffffff;
 }
 
 .review-flow-back {
+  width: auto;
+  justify-self: start;
+  padding: 0 12px;
   background: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -880,6 +887,7 @@ button {
 }
 
 .review-flow-forward {
+  width: 100%;
   min-height: 50px;
   border-radius: 16px;
   box-shadow: 0 8px 18px rgba(26, 115, 232, 0.2);
@@ -942,9 +950,10 @@ button {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  text-align: center;
+  padding: 0 16px;
+  text-align: left;
 }
 
 .report-flow-reason span {
