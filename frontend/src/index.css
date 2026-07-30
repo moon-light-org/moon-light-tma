@@ -835,7 +835,9 @@ button {
 .onboarding-panel--review {
   position: relative;
   max-width: 420px;
+  max-height: calc(100dvh - 40px);
   gap: 16px;
+  overflow-y: auto;
 }
 
 .review-flow-close {
@@ -862,6 +864,19 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.review-flow-wallet-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-flow-wallet-options .btn-secondary {
+  min-height: 56px;
+  padding: 8px 10px;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .review-flow-stars {
