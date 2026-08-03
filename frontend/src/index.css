@@ -871,22 +871,31 @@ button {
   background: #ffffff;
 }
 
-.review-flow-back {
+.review-flow-link {
   width: auto;
   min-height: 40px;
   justify-self: start;
-  padding: 0 12px;
-  background: #f4f6f8;
-  border-color: #e3e7ec;
-  border-radius: 12px;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
   box-shadow: none;
-  color: var(--c-text2);
+  color: var(--c-accent);
   font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.review-flow-back:active {
-  background: var(--c-surface2);
-  border-color: transparent;
+.review-flow-skip {
+  justify-self: end;
+}
+
+.review-flow-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.review-flow-link:active {
+  color: var(--c-accent-d);
 }
 
 .review-flow-forward {
@@ -899,24 +908,41 @@ button {
 
 .review-flow-wallet-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  max-height: 292px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-height: 238px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 2px;
+  padding-right: 8px;
+  scrollbar-color: rgba(26, 115, 232, 0.58) rgba(26, 115, 232, 0.08);
+  scrollbar-width: thin;
+}
+
+.review-flow-wallet-options::-webkit-scrollbar {
+  width: 7px;
+}
+
+.review-flow-wallet-options::-webkit-scrollbar-track {
+  background: rgba(26, 115, 232, 0.08);
+  border-radius: 999px;
+}
+
+.review-flow-wallet-options::-webkit-scrollbar-thumb {
+  background: rgba(26, 115, 232, 0.58);
+  border-radius: 999px;
 }
 
 .review-flow-wallet-options .btn-secondary {
-  min-height: 56px;
-  padding: 8px 10px;
+  min-height: 46px;
+  padding: 8px 14px;
   line-height: 1.2;
-  text-align: center;
+  text-align: left;
+  justify-content: flex-start;
 }
 
 .review-flow-stars {
   display: grid;
-  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  grid-template-columns: repeat(3, minmax(58px, 1fr));
   gap: 8px;
 }
 
@@ -1750,12 +1776,57 @@ button.onboarding-panel {
   color: var(--c-text2);
   font-size: 15px;
   line-height: 1.45;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+}
+
+.location-onboarding-card__search-preview {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(26, 115, 232, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  color: var(--c-text2);
+  box-shadow: 0 10px 24px rgba(26, 115, 232, 0.09);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.location-onboarding-card__search-preview svg {
+  color: var(--c-accent);
+  flex-shrink: 0;
+}
+
+.location-onboarding-card__search-preview span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .location-onboarding-card__actions {
   display: grid;
   gap: 10px;
+}
+
+.location-onboarding-card__link {
+  min-height: 38px;
+  border: none;
+  background: transparent;
+  color: var(--c-accent);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.location-onboarding-card__link:disabled,
+.location-onboarding-card__search-preview:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 @keyframes bob {

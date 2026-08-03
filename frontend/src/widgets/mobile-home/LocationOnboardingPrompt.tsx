@@ -1,15 +1,15 @@
-import { MapPin, Navigation, SkipForward } from "lucide-react";
+import { MapPin, Navigation, Search } from "lucide-react";
 
 type LocationOnboardingPromptProps = {
   isLocating: boolean;
   onShareLocation: () => void;
-  onSkip: () => void;
+  onSearch: () => void;
 };
 
 export function LocationOnboardingPrompt({
   isLocating,
   onShareLocation,
-  onSkip,
+  onSearch,
 }: LocationOnboardingPromptProps) {
   return (
     <div className="location-onboarding-shell" role="dialog" aria-modal="true" aria-label="Choose your location">
@@ -17,11 +17,15 @@ export function LocationOnboardingPrompt({
         <div className="location-onboarding-card__icon" aria-hidden="true">
           <MapPin size={30} />
         </div>
-        <p className="location-onboarding-card__eyebrow">Start nearby</p>
-        <h2>Find Bitcoin places around you</h2>
+        <p className="location-onboarding-card__eyebrow">Welcome to MoonLight</p>
+        <h2>Find Bitcoin places your way</h2>
         <p className="location-onboarding-card__copy">
-          Share your location once to center the map now, or skip and explore from the default map view.
+          Share your location to start nearby, or jump straight into search if you already know what you need.
         </p>
+        <button type="button" className="location-onboarding-card__search-preview" disabled={isLocating} onClick={onSearch}>
+          <Search size={17} />
+          <span>Search shops, restaurants, bars...</span>
+        </button>
         <div className="location-onboarding-card__actions">
           <button
             type="button"
@@ -34,12 +38,11 @@ export function LocationOnboardingPrompt({
           </button>
           <button
             type="button"
-            className="btn-secondary"
+            className="location-onboarding-card__link"
             disabled={isLocating}
-            onClick={onSkip}
+            onClick={onSearch}
           >
-            <SkipForward size={17} />
-            Skip for now
+            Discover with search
           </button>
         </div>
       </section>

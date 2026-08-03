@@ -184,7 +184,7 @@ export function LocationDetailSheet({
                   <article key={review.id} className="location-review-item">
                     <strong>{review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : "Accepts neither Lightning nor BTC"}</strong>
                     {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
-                    {review.rating !== null ? <p>Benefit rating: {review.rating}/3</p> : null}
+                    {review.rating !== null ? <p>Place rating: {review.rating}/3</p> : null}
                     {review.text ? <p>{review.text}</p> : null}
                   </article>
                 ))}

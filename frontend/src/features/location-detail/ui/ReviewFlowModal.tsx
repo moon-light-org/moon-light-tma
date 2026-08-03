@@ -23,10 +23,9 @@ const walletOptions: { value: LocationWallet; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 const ratingOptions = [
-  { value: 0, label: "0", copy: "Lightning only, no other benefit" },
-  { value: 1, label: "1", copy: "Decent service or 10% promo" },
-  { value: 2, label: "2", copy: "Decent service and 10-20% promo" },
-  { value: 3, label: "3", copy: "Excellent service and promo, or decent service with more than 20% promo" },
+  { value: 1, label: "1", copy: "Useful place, but the experience was basic" },
+  { value: 2, label: "2", copy: "Good place with clear Bitcoin value" },
+  { value: 3, label: "3", copy: "Excellent service, strong Bitcoin benefit, or standout promo" },
 ];
 
 export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit }: ReviewFlowModalProps) {
@@ -65,6 +64,17 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
     setRating(option.value);
     setRatingDescription(option.copy);
   };
+  const choosePaymentStatus = (status: LocationPaymentStatus | null) => {
+    setPaymentStatus(status);
+    if (status === "lightning") {
+      setStep("wallet");
+      return;
+    }
+    setWallet(null);
+    setRating(null);
+    setRatingDescription(null);
+    setStep("comment");
+  };
   const goBack = (previousStep: "payment" | "wallet" | "rating") => {
     setLocalError(null);
     setStep(previousStep);
@@ -74,17 +84,17 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
     <section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
       <button type="button" className="sheet-close review-flow-close" disabled={isSubmitting} onClick={close} aria-label="Close review flow"><X size={16} /></button>
       {step === "payment" ? <><span className="onboarding-eyebrow">Step 1 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Payment status</h1><p>How can you pay at this place?</p>
-        {paymentOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => { setPaymentStatus(option.value); setStep("wallet"); }}>{option.label}</button>)}<button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setPaymentStatus(null); setStep("wallet"); }}>Skip</button></> : null}
+        {paymentOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => choosePaymentStatus(option.value)}>{option.label}</button>)}<button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => choosePaymentStatus(null)}>Skip</button></> : null}
       {step === "wallet" ? <><span className="onboarding-eyebrow">Step 2 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Which wallet did you use?</h1><p>This is optional.</p>
         <div className="review-flow-wallet-options">{walletOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${wallet === option.value ? "active" : ""}`} onClick={() => { setWallet(option.value); setStep("rating"); }}>{option.label}</button>)}</div>
-        <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("payment")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setWallet(null); setStep("rating"); }}>Skip</button></div></> : null}
-      {step === "rating" ? <><span className="onboarding-eyebrow">Step 3 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Rate the benefit</h1><p>This is optional.</p>
-        <div className="review-flow-stars" aria-label="Benefit rating">{ratingOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`review-flow-star ${rating !== null && option.value <= rating ? "active" : ""}`} onClick={() => chooseRating(option)} aria-label={`Rate ${option.value}: ${option.copy}`} aria-pressed={rating === option.value}><Star size={32} fill={rating !== null && option.value <= rating ? "currentColor" : "none"} aria-hidden="true" /></button>)}</div>
+        <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack("payment")}>Back</button><button type="button" className="review-flow-link review-flow-skip" disabled={isSubmitting} onClick={() => { setWallet(null); setStep("rating"); }}>Skip</button></div></> : null}
+      {step === "rating" ? <><span className="onboarding-eyebrow">Step 3 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Rate this place</h1><p>Does this place really merit a star?</p>
+        <div className="review-flow-stars" aria-label="Place rating">{ratingOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`review-flow-star ${rating !== null && option.value <= rating ? "active" : ""}`} onClick={() => chooseRating(option)} aria-label={`Rate ${option.value}: ${option.copy}`} aria-pressed={rating === option.value}><Star size={32} fill={rating !== null && option.value <= rating ? "currentColor" : "none"} aria-hidden="true" /></button>)}</div>
         {ratingDescription ? <p className="review-flow-rating-description" aria-live="polite">{ratingDescription}</p> : null}
-        <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("wallet")}>Back</button>{rating === null ? <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => { setRating(null); setRatingDescription(null); setStep("comment"); }}>Skip</button> : <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => setStep("comment")}>Next</button>}</div></> : null}
+        <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack("wallet")}>Back</button>{rating === null ? <button type="button" className="review-flow-link review-flow-skip" disabled={isSubmitting} onClick={() => { setRating(null); setRatingDescription(null); setStep("comment"); }}>Skip</button> : <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => setStep("comment")}>Next</button>}</div></> : null}
       {step === "comment" ? <><span className="onboarding-eyebrow">Step 4 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Add a comment</h1><p>This is optional.</p>
         <textarea className="onboarding-input review-flow-textarea" disabled={isSubmitting} placeholder="Write a short review" value={text} onChange={(event) => setText(event.target.value)} maxLength={600} />
-        <div className="review-flow-navigation"><button type="button" className="btn-secondary review-flow-back" disabled={isSubmitting} onClick={() => goBack("rating")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button></div></> : null}
+        <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack(paymentStatus === "lightning" ? "rating" : "payment")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button></div></> : null}
       {step === "success" ? <><dotlottie-wc className="onboarding-lottie onboarding-lottie--review-success" src={REVIEW_SUCCESS_LOTTIE_SRC} autoplay loop aria-hidden="true" /><span className="onboarding-eyebrow">Review added</span><h1 ref={stepHeadingRef} tabIndex={-1}>Thanks for the feedback</h1><p>Your review is now live. This closes automatically in a moment.</p></> : null}
       {localError ? <p className="onboarding-error">{localError}</p> : null}{error ? <p className="onboarding-error">{error}</p> : null}
     </section>

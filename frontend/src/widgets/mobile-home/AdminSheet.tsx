@@ -199,7 +199,7 @@ export function AdminSheet({
                             )}
                           </button>
                         </div>
-                        {review.rating !== null ? <p>Benefit rating: {review.rating}/3</p> : null}
+                        {review.rating !== null ? <p>Place rating: {review.rating}/3</p> : null}
                         {review.text ? <p>{review.text}</p> : <p className="muted">No text review</p>}
                       </article>
                     ))}

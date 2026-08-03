@@ -40,6 +40,7 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
+import { LocationOnboardingPrompt } from "../../widgets/mobile-home/LocationOnboardingPrompt";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
@@ -65,7 +66,6 @@ export function HomePage() {
   const telegramUser     = useTelegramUser();
   const telegramInitData = getTelegramInitData();
   const telegramUserId = telegramUser?.id ?? null;
-  const canAutoLocate = typeof window !== "undefined" && Boolean(window.navigator?.geolocation);
 
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
@@ -83,7 +83,8 @@ export function HomePage() {
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
-  const [hasResolvedInitialLocation, setHasResolvedInitialLocation] = useState(() => !canAutoLocate);
+  const [isLocationOnboardingOpen, setIsLocationOnboardingOpen] = useState(true);
+  const [isLocatingFromOnboarding, setIsLocatingFromOnboarding] = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
@@ -191,7 +192,6 @@ export function HomePage() {
   }, [locations, userProfile]);
 
   const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
-  const isResolvingInitialLocation = canRenderMap && !isOnboardingOpen && !hasResolvedInitialLocation && canAutoLocate;
 
   const requestUserLocation = ({
     onFailure,
@@ -270,22 +270,6 @@ export function HomePage() {
       setIsOnboardingSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (!canRenderMap || isOnboardingOpen || hasResolvedInitialLocation || !canAutoLocate) {
-      return;
-    }
-
-    requestUserLocation({
-      silent: true,
-      onFailure: () => {
-        setHasResolvedInitialLocation(true);
-      },
-      onSuccess: () => {
-        setHasResolvedInitialLocation(true);
-      },
-    });
-  }, [canAutoLocate, canRenderMap, hasResolvedInitialLocation, isOnboardingOpen]);
 
   const handlePickLocation = (latitude: number, longitude: number) => {
     if (!telegramUser || !userProfile) {
@@ -412,6 +396,20 @@ export function HomePage() {
 
   const handleLocateMe = () => {
     requestUserLocation();
+  };
+
+  const handleWelcomeLocation = () => {
+    setIsLocatingFromOnboarding(true);
+    requestUserLocation({
+      onFailure: () => {
+        setIsLocatingFromOnboarding(false);
+        setIsLocationOnboardingOpen(false);
+      },
+      onSuccess: () => {
+        setIsLocatingFromOnboarding(false);
+        setIsLocationOnboardingOpen(false);
+      },
+    });
   };
 
   const submitProfile = async (nickname: string) => {
@@ -584,11 +582,11 @@ export function HomePage() {
   };
 
   /* ── Loading ────────────────────────────────────────── */
-  if (isLoading || isResolvingInitialLocation) {
+  if (isLoading) {
     return (
       <main className="center-screen">
         <div className="spinner" />
-        <p>{isResolvingInitialLocation ? "Finding your location..." : "Loading map…"}</p>
+        <p>Loading map…</p>
       </main>
     );
   }
@@ -654,6 +652,18 @@ export function HomePage() {
               setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
             }}
           />
+
+          {isLocationOnboardingOpen && !isOnboardingOpen ? (
+            <LocationOnboardingPrompt
+              isLocating={isLocatingFromOnboarding}
+              onShareLocation={handleWelcomeLocation}
+              onSearch={() => {
+                setIsLocationOnboardingOpen(false);
+                setCanRenderMap(true);
+                setIsSearchOpen(true);
+              }}
+            />
+          ) : null}
         </>
       ) : null}
 
