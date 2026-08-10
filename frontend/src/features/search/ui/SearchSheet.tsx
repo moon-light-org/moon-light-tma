@@ -23,6 +23,15 @@ const categoryLabels: Record<LocationCategory, string> = {
   other:            "Other",
 };
 
+function normalizeSearchText(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 export function SearchSheet({
   isOpen,
   locations,
@@ -73,9 +82,24 @@ export function SearchSheet({
   }, [isOpen, query, telegramInitData]);
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = normalizeSearchText(query);
     if (!q) return locations;
-    return remoteResults;
+    const merged = new Map<number, Location>();
+    for (const location of remoteResults) {
+      merged.set(location.id, location);
+    }
+    for (const location of locations) {
+      const searchable = normalizeSearchText([
+        location.name,
+        location.description,
+        location.category,
+        location.website_url,
+      ].filter(Boolean).join(" "));
+      if (searchable.includes(q)) {
+        merged.set(location.id, location);
+      }
+    }
+    return [...merged.values()];
   }, [query, locations, remoteResults]);
 
   if (!isOpen) return null;
@@ -83,6 +107,12 @@ export function SearchSheet({
   const handleSelect = (location: Location) => {
     onSelectLocation(location);
     onClose();
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setRemoteResults([]);
+    setIsSearching(false);
   };
 
   return (
@@ -103,7 +133,7 @@ export function SearchSheet({
             autoFocus
             autoComplete="off"
           />
-          <button type="button" className="sheet-close" onClick={onClose} aria-label="Close search">
+          <button type="button" className="sheet-close" onClick={query ? clearSearch : onClose} aria-label={query ? "Clear search" : "Close search"}>
             <X size={16} />
           </button>
         </div>
