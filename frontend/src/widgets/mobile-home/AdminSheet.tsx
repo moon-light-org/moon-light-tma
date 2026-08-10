@@ -177,18 +177,18 @@ export function AdminSheet({
                       )}
                     </button>
                   </div>
-                  {loadingReviews ? <p>Loading reviews...</p> : null}
-                  {!loadingReviews && selectedLocationReviews.length === 0 ? <p>No reviews.</p> : null}
+                  {loadingReviews ? <p>Loading comments...</p> : null}
+                  {!loadingReviews && selectedLocationReviews.length === 0 ? <p>No comments.</p> : null}
                   <div className="location-review-list">
                     {selectedLocationReviews.map((review) => (
                       <article key={review.id} className="location-review-item">
                         <div className="admin-review-head">
-                          <span>{review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : "Accepts neither Lightning nor BTC"}</span>
+                          <span>{review.source === "btcmap" ? "BTCMap comment" : review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : review.payment_status === "neither" ? "Accepts neither Lightning nor BTC" : "User review"}</span>
                           <button
                             type="button"
                             className="btn-icon-danger btn-icon-danger--small"
-                            aria-label="Delete review"
-                            title="Delete review"
+                            aria-label="Delete comment"
+                            title="Delete comment"
                             onClick={() => onDeleteReview(review)}
                             disabled={deletingReviewId === review.id}
                           >

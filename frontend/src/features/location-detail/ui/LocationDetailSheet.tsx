@@ -117,7 +117,7 @@ export function LocationDetailSheet({
             Photos
           </button>
           <button type="button" className={tab === "reviews" ? "active" : ""} onClick={() => setTab("reviews")}>
-            Reviews
+            Comments
           </button>
         </div>
 
@@ -156,17 +156,17 @@ export function LocationDetailSheet({
             <div className="location-detail-review-section">
               <section className="location-detail-review-card">
                 <span className="location-detail-review-label">Community feedback</span>
-                <h4 className="location-detail-section-title">Reviews from other users</h4>
+                <h4 className="location-detail-section-title">Comments from other users</h4>
                 <p className="location-detail-review-copy">See what other Bitcoiners are saying before you add your own take.</p>
                 <div className="location-detail-review-summary">
                   <div className="location-detail-review-stat">
                     <strong>{reviews.length}</strong>
-                    <span>{reviews.length === 1 ? "Review" : "Reviews"}</span>
+                    <span>{reviews.length === 1 ? "Comment" : "Comments"}</span>
                   </div>
                 </div>
                 <div className="location-detail-contribution-actions">
                   <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
-                    Add review
+                    Add comment
                   </button>
                   <button type="button" className="btn-secondary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
                     Report location
@@ -175,14 +175,14 @@ export function LocationDetailSheet({
               </section>
 
               <div className="location-detail-toolbar">
-                <h5 className="location-detail-list-title">Latest reviews</h5>
+                <h5 className="location-detail-list-title">Latest comments</h5>
               </div>
-              {reviewsLoading ? <p>Loading reviews...</p> : null}
-              {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No reviews yet.</p> : null}
+              {reviewsLoading ? <p>Loading comments...</p> : null}
+              {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No comments yet.</p> : null}
               <div className="location-review-list">
                 {reviews.map((review) => (
                   <article key={review.id} className="location-review-item">
-                    <strong>{review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : "Accepts neither Lightning nor BTC"}</strong>
+                    <strong>{review.source === "btcmap" ? "BTCMap comment" : review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : review.payment_status === "neither" ? "Accepts neither Lightning nor BTC" : "User review"}</strong>
                     {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
                     {review.rating !== null ? <p>Place rating: {review.rating}/3</p> : null}
                     {review.text ? <p>{review.text}</p> : null}
