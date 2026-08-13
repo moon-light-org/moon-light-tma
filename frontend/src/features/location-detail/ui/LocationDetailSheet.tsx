@@ -4,8 +4,6 @@ import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location
 import { ReviewFlowModal } from "./ReviewFlowModal";
 import { ReportFlowModal } from "./ReportFlowModal";
 
-type TabKey = "description" | "photos" | "reviews";
-
 type LocationDetailSheetProps = {
   isOpen: boolean;
   location: Location | null;
@@ -58,8 +56,6 @@ export function LocationDetailSheet({
   onCreateReview,
   onCreateReport,
 }: LocationDetailSheetProps) {
-  const [tab, setTab] = useState<TabKey>("description");
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [isReviewFlowOpen, setIsReviewFlowOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isReportFlowOpen, setIsReportFlowOpen] = useState(false);
@@ -86,7 +82,6 @@ export function LocationDetailSheet({
     return list;
   }, [photos, location]);
   const heroPhoto = orderedPhotos[0]?.image_url ?? null;
-  const activeGalleryPhoto = orderedPhotos[selectedPhotoIndex]?.image_url ?? null;
 
   useEffect(() => {
     if (!isOpen) {
@@ -138,20 +133,12 @@ export function LocationDetailSheet({
           {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
         </p>
 
-        <div className="location-detail-tabs" role="tablist" aria-label="Location detail tabs">
-          <button type="button" className={tab === "description" ? "active" : ""} onClick={() => setTab("description")}>
-            Description
-          </button>
-          <button type="button" className={tab === "photos" ? "active" : ""} onClick={() => setTab("photos")}>
-            Photos
-          </button>
-          <button type="button" className={tab === "reviews" ? "active" : ""} onClick={() => setTab("reviews")}>
-            Comments
-          </button>
-        </div>
-
         <div className="sheet-body location-detail-body">
-          {tab === "description" ? (
+          <section className="location-detail-section location-detail-description-card">
+            <div className="location-detail-section-heading">
+              <span>About</span>
+              <h4>Description</h4>
+            </div>
             <div className="location-detail-description">
               <p>{location.description?.trim() || "No description yet."}</p>
               <div className="location-detail-facts">
@@ -174,29 +161,26 @@ export function LocationDetailSheet({
                 </a>
               ) : null}
             </div>
-          ) : null}
+          </section>
 
-          {tab === "photos" ? (
-            <div>
+          {photosLoading || orderedPhotos.length > 0 ? (
+            <section className="location-detail-section location-detail-photos-section">
+              <div className="location-detail-section-heading">
+                <span>Gallery</span>
+                <h4>Photos</h4>
+              </div>
               {photosLoading ? <p>Loading photos...</p> : null}
-              {!photosLoading && orderedPhotos.length === 0 ? <p>No photos yet.</p> : null}
-              {activeGalleryPhoto ? (
-                <div className="location-gallery-main">
-                  <img src={activeGalleryPhoto} alt="Location gallery" loading="lazy" />
-                </div>
-              ) : null}
-              <div className="location-gallery-strip">
+              <div className="location-photo-carousel" aria-label="Location photos">
                 {orderedPhotos.map((photo, index) => (
-                  <button key={photo.id} type="button" className={index === selectedPhotoIndex ? "active" : ""} onClick={() => setSelectedPhotoIndex(index)}>
-                    <img src={photo.image_url} alt="Location thumbnail" loading="lazy" />
-                  </button>
+                  <div key={photo.id} className="location-photo-carousel-card" aria-label={`Photo ${index + 1}`}>
+                    <img src={photo.image_url} alt="Location" loading="lazy" />
+                  </div>
                 ))}
               </div>
-            </div>
+            </section>
           ) : null}
 
-          {tab === "reviews" ? (
-            <div className="location-detail-review-section">
+          <section className="location-detail-section location-detail-review-section">
               <div className="location-detail-review-heading">
                 <h4>Reviews</h4>
               </div>
@@ -249,8 +233,7 @@ export function LocationDetailSheet({
                   Report location
                 </button>
               </div>
-            </div>
-          ) : null}
+          </section>
 
           {error ? <p className="location-detail-error">{error}</p> : null}
         </div>
