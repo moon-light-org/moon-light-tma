@@ -19,6 +19,33 @@ type LocationDetailSheetProps = {
   onCreateReport: (payload: CreateLocationReportPayload) => Promise<void>;
 };
 
+function getReviewTitle(review: LocationReview): string {
+  if (review.source === "btcmap") return "BTCMap review";
+  if (review.payment_status === "lightning") return "Accepts Lightning";
+  if (review.payment_status === "btc_only") return "Accepts only BTC";
+  if (review.payment_status === "neither") return "Accepts neither Lightning nor BTC";
+  return "User review";
+}
+
+function formatReviewDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recent";
+  const diffDays = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 30) return `${diffDays} days ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} ${diffMonths === 1 ? "month" : "months"} ago`;
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${diffYears} ${diffYears === 1 ? "year" : "years"} ago`;
+}
+
+function renderStars(rating: number | null) {
+  if (rating === null) return null;
+  const filled = Math.max(0, Math.min(5, rating === 0 ? 0 : Math.round((rating / 3) * 5)));
+  return <span className="location-review-carousel-card__stars" aria-label={`${rating} out of 3 rating`}>{"★".repeat(filled)}{"☆".repeat(5 - filled)}</span>;
+}
+
 export function LocationDetailSheet({
   isOpen,
   location,
@@ -37,6 +64,7 @@ export function LocationDetailSheet({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isReportFlowOpen, setIsReportFlowOpen] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const orderedPhotos = useMemo(() => {
     const list = [...photos];
@@ -65,6 +93,7 @@ export function LocationDetailSheet({
       setIsReviewFlowOpen(false);
       setIsReportFlowOpen(false);
       setIsSubmittingReview(false);
+      setShowAllReviews(false);
       setError(null);
     }
   }, [isOpen]);
@@ -154,40 +183,57 @@ export function LocationDetailSheet({
 
           {tab === "reviews" ? (
             <div className="location-detail-review-section">
-              <section className="location-detail-review-card">
-                <span className="location-detail-review-label">Community feedback</span>
-                <h4 className="location-detail-section-title">Comments from other users</h4>
-                <p className="location-detail-review-copy">See what other Bitcoiners are saying before you add your own take.</p>
-                <div className="location-detail-review-summary">
-                  <div className="location-detail-review-stat">
-                    <strong>{reviews.length}</strong>
-                    <span>{reviews.length === 1 ? "Comment" : "Comments"}</span>
-                  </div>
-                </div>
-                <div className="location-detail-contribution-actions">
-                  <button type="button" className="btn-primary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
-                    Add comment
-                  </button>
-                  <button type="button" className="btn-secondary location-detail-review-trigger" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
-                    Report location
-                  </button>
-                </div>
-              </section>
-
-              <div className="location-detail-toolbar">
-                <h5 className="location-detail-list-title">Latest comments</h5>
+              <div className="location-detail-review-heading">
+                <h4>Reviews</h4>
               </div>
               {reviewsLoading ? <p>Loading comments...</p> : null}
               {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No comments yet.</p> : null}
-              <div className="location-review-list">
-                {reviews.map((review) => (
-                  <article key={review.id} className="location-review-item">
-                    <strong>{review.source === "btcmap" ? "BTCMap comment" : review.payment_status === "lightning" ? "Accepts Lightning" : review.payment_status === "btc_only" ? "Accepts only BTC" : review.payment_status === "neither" ? "Accepts neither Lightning nor BTC" : "User review"}</strong>
-                    {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
-                    {review.rating !== null ? <p>Place rating: {review.rating}/3</p> : null}
-                    {review.text ? <p>{review.text}</p> : null}
-                  </article>
-                ))}
+              {reviews.length > 0 ? (
+                <>
+                  <div className="location-review-carousel" aria-label="Reviews carousel">
+                    {reviews.slice(0, 8).map((review) => (
+                      <article key={review.id} className="location-review-carousel-card">
+                        <div className="location-review-carousel-card__head">
+                          <span className="location-review-carousel-card__avatar">{review.source === "btcmap" ? "B" : "U"}</span>
+                          <strong>{getReviewTitle(review)}</strong>
+                        </div>
+                        <div className="location-review-carousel-card__meta">
+                          {renderStars(review.rating)}
+                          <span>{formatReviewDate(review.created_at)}</span>
+                        </div>
+                        {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
+                        <p className="location-review-carousel-card__text">{review.text || "No text review."}</p>
+                      </article>
+                    ))}
+                  </div>
+                  <button type="button" className="location-review-see-all" onClick={() => setShowAllReviews((value) => !value)}>
+                    {showAllReviews ? "Hide reviews" : "See all reviews"}
+                    <span aria-hidden="true">›</span>
+                  </button>
+                </>
+              ) : null}
+              {showAllReviews ? (
+                <div className="location-review-list location-review-list--expanded">
+                  {reviews.map((review) => (
+                    <article key={review.id} className="location-review-item">
+                      <strong>{getReviewTitle(review)}</strong>
+                      <div className="location-review-item__meta">
+                        {renderStars(review.rating)}
+                        <span>{formatReviewDate(review.created_at)}</span>
+                      </div>
+                      {review.wallet ? <p className="muted">Wallet: {review.wallet.replaceAll("_", " ")}</p> : null}
+                      {review.text ? <p>{review.text}</p> : <p className="muted">No text review.</p>}
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+              <div className="location-detail-review-actions">
+                <button type="button" className="btn-secondary location-detail-review-add" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
+                  Add comment
+                </button>
+                <button type="button" className="location-detail-report-link" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
+                  Report location
+                </button>
               </div>
             </div>
           ) : null}

@@ -619,84 +619,147 @@ button {
   gap: 16px;
 }
 
-.location-detail-review-card {
-  padding: 18px;
-  border-radius: 18px;
-  background:
-    linear-gradient(#ffffff, #ffffff) padding-box,
-    linear-gradient(135deg, rgba(26, 115, 232, 0.18), rgba(242, 153, 0, 0.18)) border-box;
-  border: 1px solid transparent;
-  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+.location-detail-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.location-detail-review-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  color: var(--c-orange);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.location-detail-section-title {
-  font-size: 20px;
-  font-weight: 700;
+.location-detail-review-heading h4 {
   color: var(--c-text);
-  line-height: 1.05;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
 }
 
-.location-detail-review-copy {
-  margin-top: 8px;
-  color: var(--c-text2);
-  font-size: 14px;
-  line-height: 1.45;
+.location-review-carousel {
+  display: flex;
+  gap: 14px;
+  margin-left: -16px;
+  margin-right: -16px;
+  overflow-x: auto;
+  padding: 2px 16px 4px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
 }
 
-.location-detail-review-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.location-review-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.location-review-carousel-card {
+  flex: 0 0 min(78vw, 330px);
+  min-height: 164px;
+  padding: 18px;
+  border: none;
+  border-radius: 28px;
+  background: #eef5f7;
+  color: var(--c-text);
+  scroll-snap-align: start;
+}
+
+.location-review-carousel-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.location-review-carousel-card__head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-review-carousel-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #6070c8;
+  color: #fff;
+  font-weight: 800;
+}
+
+.location-review-carousel-card__meta,
+.location-review-item__meta {
+  display: flex;
+  align-items: center;
   gap: 10px;
   margin-top: 14px;
-  margin-bottom: 14px;
-}
-
-.location-detail-review-stat {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #f6f8fc;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-}
-
-.location-detail-review-stat strong {
-  display: block;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--c-text);
-}
-
-.location-detail-review-stat span {
-  display: block;
-  margin-top: 3px;
-  font-size: 12px;
   color: var(--c-text2);
+  font-size: 14px;
 }
 
-.location-detail-review-trigger {
-  width: 100%;
+.location-review-carousel-card__stars {
+  color: #f6a800;
+  font-size: 20px;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
-.location-detail-contribution-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+.location-review-carousel-card__text {
+  display: -webkit-box;
+  margin-top: 12px;
+  overflow: hidden;
+  color: var(--c-text);
+  font-size: 18px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-.location-detail-contribution-actions .location-detail-review-trigger {
+.location-review-see-all {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 999px;
+  background: #e6ecee;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.location-review-see-all span {
+  font-size: 32px;
+  line-height: 0.6;
+}
+
+.location-detail-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.location-detail-review-add {
+  flex: 1;
+  min-height: 46px;
+}
+
+.location-detail-report-link {
+  border: none;
+  background: transparent;
+  color: var(--c-text2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.location-detail-report-link:disabled {
+  opacity: 0.55;
 }
 
 .location-detail-list-title {
@@ -1012,12 +1075,6 @@ button {
 .btn-secondary.active {
   background: rgba(26, 115, 232, 0.1);
   border-color: var(--c-accent);
-}
-
-@media (max-width: 360px) {
-  .location-detail-contribution-actions {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ─── Form ───────────────────────────────────────────────────── */
