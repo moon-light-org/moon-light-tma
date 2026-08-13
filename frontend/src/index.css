@@ -592,28 +592,14 @@ button {
 }
 
 .location-detail-description-card {
-  padding: 18px;
-  border-radius: 28px;
-  background: linear-gradient(145deg, #f8fbff 0%, #ffffff 52%, #fff8ec 100%);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
-}
-
-.location-detail-section-heading span {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--c-orange);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  padding: 0;
 }
 
 .location-detail-section-heading h4 {
   color: var(--c-text);
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
   line-height: 1;
 }
 
@@ -712,6 +698,7 @@ button {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .location-review-carousel {

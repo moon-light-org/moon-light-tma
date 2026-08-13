@@ -136,7 +136,6 @@ export function LocationDetailSheet({
         <div className="sheet-body location-detail-body">
           <section className="location-detail-section location-detail-description-card">
             <div className="location-detail-section-heading">
-              <span>About</span>
               <h4>Description</h4>
             </div>
             <div className="location-detail-description">
@@ -166,7 +165,6 @@ export function LocationDetailSheet({
           {photosLoading || orderedPhotos.length > 0 ? (
             <section className="location-detail-section location-detail-photos-section">
               <div className="location-detail-section-heading">
-                <span>Gallery</span>
                 <h4>Photos</h4>
               </div>
               {photosLoading ? <p>Loading photos...</p> : null}
