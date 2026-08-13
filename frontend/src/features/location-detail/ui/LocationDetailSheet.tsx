@@ -152,8 +152,22 @@ export function LocationDetailSheet({
 
         <div className="sheet-body location-detail-body">
           {tab === "description" ? (
-            <div>
+            <div className="location-detail-description">
               <p>{location.description?.trim() || "No description yet."}</p>
+              <div className="location-detail-facts">
+                {location.address ? <p><strong>Address</strong><span>{location.address}</span></p> : null}
+                {location.phone ? <p><strong>Phone</strong><a href={`tel:${location.phone}`}>{location.phone}</a></p> : null}
+                {location.schedules ? <p><strong>Hours</strong><span>{location.schedules}</span></p> : null}
+                {location.accepts_bitcoin !== null || location.accepts_lightning !== null ? (
+                  <p>
+                    <strong>Payments</strong>
+                    <span>{[
+                      location.accepts_bitcoin ? "Bitcoin" : null,
+                      location.accepts_lightning ? "Lightning" : null,
+                    ].filter(Boolean).join(" + ") || "Bitcoin support not confirmed"}</span>
+                  </p>
+                ) : null}
+              </div>
               {location.website_url ? (
                 <a className="location-card__link" href={location.website_url} target="_blank" rel="noreferrer">
                   Visit website

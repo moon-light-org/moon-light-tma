@@ -47,8 +47,12 @@ function normalizeLocation(raw: ApiLocation): Location | null {
     longitude,
     category: raw.category,
     website_url: raw.website_url ?? null,
+    phone: raw.phone ?? null,
+    address: raw.address ?? null,
     image_url: raw.image_url ?? null,
     schedules: raw.schedules ?? null,
+    accepts_bitcoin: raw.accepts_bitcoin ?? null,
+    accepts_lightning: raw.accepts_lightning ?? null,
     is_approved: Boolean(raw.is_approved),
     created_at: raw.created_at ?? new Date(0).toISOString(),
   };

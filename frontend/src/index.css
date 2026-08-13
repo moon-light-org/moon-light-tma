@@ -605,6 +605,41 @@ button {
   padding-top: 12px;
 }
 
+.location-detail-description {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.location-detail-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-detail-facts p {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+  margin: 0;
+  color: var(--c-text);
+  line-height: 1.35;
+}
+
+.location-detail-facts strong {
+  color: var(--c-text2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.location-detail-facts a {
+  color: var(--c-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .location-detail-toolbar {
   display: flex;
   align-items: center;

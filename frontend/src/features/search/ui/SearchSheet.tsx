@@ -93,6 +93,8 @@ export function SearchSheet({
         location.name,
         location.description,
         location.category,
+        location.address,
+        location.phone,
         location.website_url,
       ].filter(Boolean).join(" "));
       if (searchable.includes(q)) {
