@@ -24,6 +24,7 @@ type MapProps = {
 const SOURCE_ID = "saved-locations";
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
+const POINT_FALLBACK_LAYER_ID = "unclustered-fallback";
 const POINT_LAYER_ID = "unclustered";
 const USER_LOCATION_SOURCE_ID = "user-location";
 const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
@@ -49,14 +50,43 @@ function markerSvg(category: LocationMainCategory, verified: boolean): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56"><path d="M24 53C21 45 6 37 6 23a18 18 0 1 1 36 0c0 14-15 22-18 30Z" fill="${fill}" stroke="#fff" stroke-width="5"/><path d="M24 50C20 42 9 35 9 23a15 15 0 1 1 30 0c0 12-11 19-15 27Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g transform="translate(6 3)" color="${icon}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${markerIconPaths[category]}</g>${badge}</svg>`;
 }
 
+function rasterizeMarker(svg: string): Promise<ImageData> {
+  return new Promise((resolve, reject) => {
+    const width = 48;
+    const height = 56;
+    const pixelRatio = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      reject(new Error("Canvas is unavailable"));
+      return;
+    }
+
+    const image = new Image();
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    image.onload = () => {
+      context.scale(pixelRatio, pixelRatio);
+      context.drawImage(image, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(context.getImageData(0, 0, canvas.width, canvas.height));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not rasterize map marker"));
+    };
+    image.src = url;
+  });
+}
+
 async function registerMarkerImages(map: MapLibreMap) {
   const categories = Object.keys(markerIconPaths) as LocationMainCategory[];
   await Promise.all(categories.flatMap((category) => [false, true].map(async (verified) => {
     const id = `${category}-${verified ? "verified" : "unverified"}`;
     if (map.hasImage(id)) return;
-    const uri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markerSvg(category, verified))}`;
-    const image = await map.loadImage(uri);
-    if (!map.hasImage(id)) map.addImage(id, image.data);
+    const image = await rasterizeMarker(markerSvg(category, verified));
+    if (!map.hasImage(id)) map.addImage(id, image, { pixelRatio: 2 });
   })));
 }
 
@@ -174,7 +204,7 @@ export function LocationMap({
       return;
     }
 
-    if (feature?.layer?.id === POINT_LAYER_ID) {
+    if (feature?.layer?.id === POINT_LAYER_ID || feature?.layer?.id === POINT_FALLBACK_LAYER_ID) {
       const id = Number(feature.properties?.id);
       const selected = locations.find((location) => location.id === id) ?? null;
       onLocationSelect(selected);
@@ -188,8 +218,8 @@ export function LocationMap({
   const handleMapLoad = () => {
     emitViewportBounds();
     const map = mapRef.current?.getMap();
-    if (map) void registerMarkerImages(map).catch(() => {
-      // Keep the map usable if the browser cannot decode inline SVG marker images.
+    if (map) void registerMarkerImages(map).catch((error: unknown) => {
+      console.error("[map] Failed to register category markers", error);
     });
   };
 
@@ -203,7 +233,7 @@ export function LocationMap({
       }}
       mapStyle={MAP_STYLE_URL}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-      interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID]}
+      interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID, POINT_FALLBACK_LAYER_ID]}
       onLoad={handleMapLoad}
       onMoveEnd={emitViewportBounds}
       onClick={handleMapClick}
@@ -238,6 +268,17 @@ export function LocationMap({
           }}
           paint={{
             "text-color": "#ffffff",
+          }}
+        />
+        <Layer
+          id={POINT_FALLBACK_LAYER_ID}
+          type="circle"
+          filter={["!", ["has", "point_count"]]}
+          paint={{
+            "circle-color": ["case", ["get", "isApproved"], "#172554", "#ffffff"],
+            "circle-radius": ["case", ["get", "selected"], 12, 9],
+            "circle-stroke-color": ["case", ["get", "isApproved"], "#f59e0b", "#64748b"],
+            "circle-stroke-width": ["case", ["get", "isApproved"], 3, 2.5],
           }}
         />
         <Layer
