@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { X, MapPin, AlertCircle, ShoppingBag, Utensils, Grid2x2 } from "lucide-react";
-import type { CreateLocationPayload, LocationCategory } from "../../../entities/location/model/types";
+import { X, MapPin, AlertCircle } from "lucide-react";
+import { MAIN_CATEGORY_BY_VALUE, MAIN_CATEGORY_OPTIONS } from "../../../entities/location/model/mainCategories";
+import type { CreateLocationPayload, LocationMainCategory } from "../../../entities/location/model/types";
 import { CREATE_LOCATION_LOADING_LOTTIE_SRC } from "../../../shared/ui/lotties";
 
 type AddLocationModalProps = {
@@ -11,12 +12,6 @@ type AddLocationModalProps = {
   onSubmit: (payload: CreateLocationPayload) => Promise<void>;
 };
 
-const categories: Array<{ value: LocationCategory; label: string; Icon: React.ElementType }> = [
-  { value: "grocery",        label: "Grocery",    Icon: ShoppingBag },
-  { value: "restaurant-bar", label: "Food & Bar", Icon: Utensils },
-  { value: "other",          label: "Other",      Icon: Grid2x2 },
-];
-
 export function AddLocationModal({
   isOpen,
   coordinates,
@@ -26,7 +21,7 @@ export function AddLocationModal({
 }: AddLocationModalProps) {
   const [name,        setName]        = useState("");
   const [description, setDescription] = useState("");
-  const [category,    setCategory]    = useState<LocationCategory>("other");
+  const [mainCategory, setMainCategory] = useState<LocationMainCategory>("other");
   const [websiteUrl,  setWebsiteUrl]  = useState("");
   const [schedules,   setSchedules]   = useState("");
   const [error,       setError]       = useState<string | null>(null);
@@ -34,7 +29,7 @@ export function AddLocationModal({
   if (!isOpen || !coordinates) return null;
 
   const reset = () => {
-    setName(""); setDescription(""); setCategory("other");
+    setName(""); setDescription(""); setMainCategory("other");
     setWebsiteUrl(""); setSchedules(""); setError(null);
   };
 
@@ -49,7 +44,8 @@ export function AddLocationModal({
         description: description.trim() || undefined,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        category,
+        category: MAIN_CATEGORY_BY_VALUE[mainCategory].legacyCategory,
+        mainCategory,
         websiteUrl: websiteUrl.trim() || undefined,
         schedules: schedules.trim() || undefined,
       });
@@ -100,12 +96,12 @@ export function AddLocationModal({
           <div className="form-group">
             <span className="form-label">Category</span>
             <div className="category-pills">
-              {categories.map(({ value, label, Icon }) => (
+              {MAIN_CATEGORY_OPTIONS.map(({ value, label, Icon }) => (
                 <button
                   key={value}
                   type="button"
-                  className={`category-pill${category === value ? " is-active" : ""}`}
-                  onClick={() => setCategory(value)}
+                  className={`category-pill${mainCategory === value ? " is-active" : ""}`}
+                  onClick={() => setMainCategory(value)}
                 >
                   <Icon size={14} />
                   {label}

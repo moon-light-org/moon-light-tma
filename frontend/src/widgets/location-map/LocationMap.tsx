@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import type { FeatureCollection, Point } from "geojson";
-import type { Location } from "../../entities/location/model/types";
+import type { Location, LocationMainCategory } from "../../entities/location/model/types";
 
 type MapProps = {
   locations: Location[];
+  selectedLocationId: number | null;
+  isPickingLocation: boolean;
   onMapPickLocation: (lat: number, lng: number) => void;
   onLocationSelect: (location: Location | null) => void;
   onViewportChange?: (bounds: {
@@ -27,7 +30,37 @@ const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
 const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
 const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
-function toGeoJson(locations: Location[]): FeatureCollection<Point> {
+const markerIconPaths: Record<LocationMainCategory, string> = {
+  accommodation: '<path d="M7 25v-8m0 4h18a4 4 0 0 1 4 4v4M7 29v-8h7a4 4 0 0 1 4 4v4M7 29h22"/>',
+  bitcoin: '<text x="18" y="28" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="currentColor" stroke="none">&#8383;</text>',
+  food_drink: '<path d="M10 13v8m4-8v8m-2-8v16m9-16v16m0-16c5 3 5 9 0 11"/>',
+  other: '<rect x="9" y="13" width="7" height="7" rx="1"/><rect x="20" y="13" width="7" height="7" rx="1"/><rect x="9" y="24" width="7" height="7" rx="1"/><rect x="20" y="24" width="7" height="7" rx="1"/>',
+  retail: '<path d="M9 18h18l-2 13H11L9 18Z"/><path d="M14 19v-2a4 4 0 0 1 8 0v2"/>',
+  services: '<path d="m11 29 9-9m-7-6a6 6 0 0 0 7 7l8 8-3 3-8-8a6 6 0 0 1-7-7l4 2 3-3-2-4Z"/>',
+};
+
+function markerSvg(category: LocationMainCategory, verified: boolean): string {
+  const fill = verified ? "#172554" : "#ffffff";
+  const stroke = verified ? "#172554" : "#64748b";
+  const icon = verified ? "#ffffff" : "#334155";
+  const badge = verified
+    ? '<circle cx="35" cy="10" r="8" fill="#f59e0b" stroke="#fff" stroke-width="2"/><path d="m36 4-5 7h4l-1 6 5-8h-4l1-5Z" fill="#fff" stroke="none"/>'
+    : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56"><path d="M24 53C21 45 6 37 6 23a18 18 0 1 1 36 0c0 14-15 22-18 30Z" fill="${fill}" stroke="#fff" stroke-width="5"/><path d="M24 50C20 42 9 35 9 23a15 15 0 1 1 30 0c0 12-11 19-15 27Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g transform="translate(6 3)" color="${icon}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${markerIconPaths[category]}</g>${badge}</svg>`;
+}
+
+async function registerMarkerImages(map: MapLibreMap) {
+  const categories = Object.keys(markerIconPaths) as LocationMainCategory[];
+  await Promise.all(categories.flatMap((category) => [false, true].map(async (verified) => {
+    const id = `${category}-${verified ? "verified" : "unverified"}`;
+    if (map.hasImage(id)) return;
+    const uri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markerSvg(category, verified))}`;
+    const image = await map.loadImage(uri);
+    if (!map.hasImage(id)) map.addImage(id, image.data);
+  })));
+}
+
+function toGeoJson(locations: Location[], selectedLocationId: number | null): FeatureCollection<Point> {
   return {
     type: "FeatureCollection",
     features: locations
@@ -45,7 +78,9 @@ function toGeoJson(locations: Location[]): FeatureCollection<Point> {
           id: location.id,
           name: location.name,
           description: location.description,
-          category: location.category,
+          mainCategory: location.main_category,
+          isApproved: location.is_approved,
+          selected: location.id === selectedLocationId,
         },
       })),
   };
@@ -53,6 +88,8 @@ function toGeoJson(locations: Location[]): FeatureCollection<Point> {
 
 export function LocationMap({
   locations,
+  selectedLocationId,
+  isPickingLocation,
   onMapPickLocation,
   onLocationSelect,
   onViewportChange,
@@ -61,7 +98,7 @@ export function LocationMap({
   userLocation = null,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
-  const geoJson = useMemo(() => toGeoJson(locations), [locations]);
+  const geoJson = useMemo(() => toGeoJson(locations, selectedLocationId), [locations, selectedLocationId]);
   const userLocationGeoJson = useMemo<FeatureCollection<Point>>(
     () => ({
       type: "FeatureCollection",
@@ -95,6 +132,11 @@ export function LocationMap({
       duration: 450,
     });
   }, [focusCoordinates]);
+
+  useEffect(() => {
+    const canvas = mapRef.current?.getMap().getCanvas();
+    if (canvas) canvas.style.cursor = isPickingLocation ? "crosshair" : "";
+  }, [isPickingLocation]);
 
   const emitViewportBounds = () => {
     const bounds = mapRef.current?.getMap().getBounds();
@@ -140,7 +182,15 @@ export function LocationMap({
     }
 
     onLocationSelect(null);
-    onMapPickLocation(event.lngLat.lat, event.lngLat.lng);
+    if (isPickingLocation) onMapPickLocation(event.lngLat.lat, event.lngLat.lng);
+  };
+
+  const handleMapLoad = () => {
+    emitViewportBounds();
+    const map = mapRef.current?.getMap();
+    if (map) void registerMarkerImages(map).catch(() => {
+      // Keep the map usable if the browser cannot decode inline SVG marker images.
+    });
   };
 
   return (
@@ -154,7 +204,7 @@ export function LocationMap({
       mapStyle={MAP_STYLE_URL}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID]}
-      onLoad={emitViewportBounds}
+      onLoad={handleMapLoad}
       onMoveEnd={emitViewportBounds}
       onClick={handleMapClick}
     >
@@ -192,13 +242,14 @@ export function LocationMap({
         />
         <Layer
           id={POINT_LAYER_ID}
-          type="circle"
+          type="symbol"
           filter={["!", ["has", "point_count"]]}
-          paint={{
-            "circle-color": "#1a73e8",
-            "circle-radius": 8,
-            "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2.5,
+          layout={{
+            "icon-image": ["concat", ["get", "mainCategory"], ["case", ["get", "isApproved"], "-verified", "-unverified"]],
+            "icon-size": ["case", ["get", "selected"], 1.28, 0.88],
+            "icon-anchor": "bottom",
+            "icon-allow-overlap": ["get", "selected"],
+            "symbol-sort-key": ["case", ["get", "selected"], 10, ["get", "isApproved"], 5, 1],
           }}
         />
       </Source>

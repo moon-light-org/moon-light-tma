@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { BadgeCheck, ShieldAlert, X } from "lucide-react";
+import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 import { ReviewFlowModal } from "./ReviewFlowModal";
 import { ReportFlowModal } from "./ReportFlowModal";
@@ -82,6 +83,8 @@ export function LocationDetailSheet({
     return list;
   }, [photos, location]);
   const heroPhoto = orderedPhotos[0]?.image_url ?? null;
+  const category = MAIN_CATEGORY_BY_VALUE[location?.main_category ?? "other"];
+  const CategoryIcon = category.Icon;
 
   useEffect(() => {
     if (!isOpen) {
@@ -122,8 +125,17 @@ export function LocationDetailSheet({
         <div className="location-detail-hero">
           {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__skeleton" aria-hidden="true" />}
         </div>
-        <div className="sheet-header">
-          <h3>{location.name}</h3>
+        <div className="sheet-header location-detail-header">
+          <div className="location-detail-title">
+            <h3>{location.name}</h3>
+            <div className="location-detail-badges">
+              <span className="location-detail-category"><CategoryIcon size={14} />{category.label}</span>
+              <span className={`location-detail-verification ${location.is_approved ? "is-verified" : "is-unverified"}`}>
+                {location.is_approved ? <BadgeCheck size={14} /> : <ShieldAlert size={14} />}
+                {location.is_approved ? "Verified" : "Not verified"}
+              </span>
+            </div>
+          </div>
           <button type="button" className="sheet-close" onClick={onClose} aria-label="Close">
             <X size={16} />
           </button>
@@ -182,8 +194,8 @@ export function LocationDetailSheet({
               <div className="location-detail-review-heading">
                 <h4>Reviews</h4>
               </div>
-              {reviewsLoading ? <p>Loading comments...</p> : null}
-              {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No comments yet.</p> : null}
+              {reviewsLoading ? <p>Loading reviews...</p> : null}
+              {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No reviews yet.</p> : null}
               {reviews.length > 0 ? (
                 <>
                   <div className="location-review-carousel" aria-label="Reviews carousel">
@@ -225,7 +237,7 @@ export function LocationDetailSheet({
               ) : null}
               <div className="location-detail-review-actions">
                 <button type="button" className="btn-secondary location-detail-review-add" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
-                  Add comment
+                  Add review
                 </button>
                 <button type="button" className="location-detail-report-link" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
                   Report location

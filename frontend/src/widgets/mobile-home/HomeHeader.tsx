@@ -1,9 +1,10 @@
-import { Search, MapPin, ShoppingBag, Utensils, Grid2x2, Shield } from "lucide-react";
-import type { LocationCategory } from "../../entities/location/model/types";
+import { Search, MapPin, Shield } from "lucide-react";
+import { MAIN_CATEGORY_OPTIONS } from "../../entities/location/model/mainCategories";
+import type { LocationMainCategory } from "../../entities/location/model/types";
 
 type HomeHeaderProps = {
-  selectedCategories: LocationCategory[];
-  onToggleCategory: (category: LocationCategory | "all") => void;
+  selectedCategories: LocationMainCategory[];
+  onToggleCategory: (category: LocationMainCategory | "all") => void;
   onSearchClick: () => void;
   profileInitial: string;
   onProfileClick: () => void;
@@ -11,15 +12,9 @@ type HomeHeaderProps = {
   onAdminClick: () => void;
 };
 
-const categories: Array<{
-  id: LocationCategory | "all";
-  label: string;
-  Icon: React.ElementType;
-}> = [
-  { id: "all",            label: "All",     Icon: MapPin },
-  { id: "grocery",        label: "Grocery", Icon: ShoppingBag },
-  { id: "restaurant-bar", label: "Food",    Icon: Utensils },
-  { id: "other",          label: "Other",   Icon: Grid2x2 },
+const categories = [
+  { id: "all" as const, label: "All", Icon: MapPin },
+  ...MAIN_CATEGORY_OPTIONS.map(({ value, label, Icon }) => ({ id: value, label, Icon })),
 ];
 
 export function HomeHeader({
@@ -31,7 +26,7 @@ export function HomeHeader({
   isAdmin,
   onAdminClick,
 }: HomeHeaderProps) {
-  const isSelected = (category: LocationCategory | "all") => {
+  const isSelected = (category: LocationMainCategory | "all") => {
     if (category === "all") return selectedCategories.length === 0;
     return selectedCategories.includes(category);
   };

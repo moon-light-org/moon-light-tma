@@ -19,7 +19,7 @@ import type {
   CreateLocationReviewPayload,
   AdminLocationReport,
   Location,
-  LocationCategory,
+  LocationMainCategory,
   LocationPhoto,
   LocationReview,
 } from "../../entities/location/model/types";
@@ -77,7 +77,7 @@ export function HomePage() {
   const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation,        setUserLocation]        = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<LocationCategory[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<LocationMainCategory[]>([]);
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
@@ -272,6 +272,7 @@ export function HomePage() {
   };
 
   const handlePickLocation = (latitude: number, longitude: number) => {
+    if (!isAwaitingMapPickForNewLocation) return;
     if (!telegramUser || !userProfile) {
       setError("Open in Telegram to add a new location.");
       return;
@@ -294,7 +295,7 @@ export function HomePage() {
     }
   };
 
-  const handleToggleCategory = (category: LocationCategory | "all") => {
+  const handleToggleCategory = (category: LocationMainCategory | "all") => {
     if (category === "all") { setSelectedCategories([]); return; }
     setSelectedCategories((prev) =>
       prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
@@ -304,7 +305,7 @@ export function HomePage() {
   const visibleLocations =
     selectedCategories.length === 0
       ? locations
-      : locations.filter((l) => selectedCategories.includes(l.category));
+      : locations.filter((l) => selectedCategories.includes(l.main_category));
 
   useEffect(() => {
     if (!viewportBounds) {
@@ -599,6 +600,8 @@ export function HomePage() {
           {/* Full-screen map */}
           <LocationMap
             locations={visibleLocations}
+            selectedLocationId={selectedLocation?.id ?? null}
+            isPickingLocation={isAwaitingMapPickForNewLocation}
             onMapPickLocation={handlePickLocation}
             onLocationSelect={setSelectedLocation}
             onViewportChange={setViewportBounds}

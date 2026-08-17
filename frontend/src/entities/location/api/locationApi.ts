@@ -6,6 +6,7 @@ import type {
   Location,
   LocationPhoto,
   LocationReview,
+  LocationMainCategory,
 } from "../model/types";
 import { httpJson } from "../../../shared/api/http";
 
@@ -29,6 +30,23 @@ function toFiniteNumber(value: unknown): number | null {
   return null;
 }
 
+const mainCategories = new Set<LocationMainCategory>([
+  "accommodation", "bitcoin", "food_drink", "other", "retail", "services",
+]);
+
+function normalizeMainCategory(value: unknown, category: unknown): LocationMainCategory {
+  if (typeof value === "string" && mainCategories.has(value as LocationMainCategory)) {
+    return value as LocationMainCategory;
+  }
+  const legacy = typeof category === "string" ? category.toLowerCase() : "";
+  if (/(hotel|hostel|lodging|camp|accommodation)/.test(legacy)) return "accommodation";
+  if (/(bitcoin|atm|exchange)/.test(legacy)) return "bitcoin";
+  if (/(food|restaurant|bar|cafe|bakery)/.test(legacy)) return "food_drink";
+  if (/(shop|store|grocery|market|retail)/.test(legacy)) return "retail";
+  if (/(service|repair|professional)/.test(legacy)) return "services";
+  return "other";
+}
+
 function normalizeLocation(raw: ApiLocation): Location | null {
   const id = toFiniteNumber(raw.id);
   const latitude = toFiniteNumber(raw.latitude ?? raw.lat);
@@ -46,6 +64,7 @@ function normalizeLocation(raw: ApiLocation): Location | null {
     latitude,
     longitude,
     category: raw.category,
+    main_category: normalizeMainCategory(raw.main_category, raw.category),
     website_url: raw.website_url ?? null,
     phone: raw.phone ?? null,
     address: raw.address ?? null,
@@ -96,11 +115,14 @@ export async function createLocation(
   payload: CreateLocationPayload,
   telegramInitData: string | null
 ): Promise<Location> {
-  return httpJson<Location>("/api/locations", {
+  const response = await httpJson<ApiLocation>("/api/locations", {
     method: "POST",
     telegramInitData,
     body: payload,
   });
+  const location = normalizeLocation(response);
+  if (!location) throw new Error("Invalid location returned by the server");
+  return location;
 }
 
 export async function fetchLocationPhotos(

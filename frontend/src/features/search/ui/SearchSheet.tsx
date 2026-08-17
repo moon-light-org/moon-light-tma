@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { X, Search, MapPin, ShoppingBag, Utensils, Grid2x2 } from "lucide-react";
-import type { Location, LocationCategory } from "../../../entities/location/model/types";
+import { X, Search, MapPin } from "lucide-react";
+import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
+import type { Location } from "../../../entities/location/model/types";
 import { fetchLocations } from "../../../entities/location/api/locationApi";
 
 type SearchSheetProps = {
@@ -9,18 +10,6 @@ type SearchSheetProps = {
   telegramInitData: string | null;
   onClose: () => void;
   onSelectLocation: (location: Location) => void;
-};
-
-const categoryIcons: Record<LocationCategory, React.ElementType> = {
-  grocery:          ShoppingBag,
-  "restaurant-bar": Utensils,
-  other:            Grid2x2,
-};
-
-const categoryLabels: Record<LocationCategory, string> = {
-  grocery:          "Grocery",
-  "restaurant-bar": "Food & Bar",
-  other:            "Other",
 };
 
 function normalizeSearchText(value: string | null | undefined): string {
@@ -93,6 +82,7 @@ export function SearchSheet({
         location.name,
         location.description,
         location.category,
+        location.main_category,
         location.address,
         location.phone,
         location.website_url,
@@ -153,7 +143,8 @@ export function SearchSheet({
             </div>
           ) : (
             results.map((location) => {
-              const Icon = categoryIcons[location.category] ?? Grid2x2;
+              const category = MAIN_CATEGORY_BY_VALUE[location.main_category];
+              const Icon = category.Icon;
               return (
                 <button
                   key={location.id}
@@ -167,7 +158,7 @@ export function SearchSheet({
                   <span className="search-result-row__body">
                     <span className="search-result-row__name">{location.name}</span>
                     <span className="search-result-row__meta">
-                      {categoryLabels[location.category]}
+                      {category.label} · {location.is_approved ? "Verified" : "Not verified"}
                       {location.description ? ` · ${location.description.slice(0, 48)}${location.description.length > 48 ? "…" : ""}` : ""}
                     </span>
                   </span>

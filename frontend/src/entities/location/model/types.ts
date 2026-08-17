@@ -1,4 +1,5 @@
 export type LocationCategory = "grocery" | "restaurant-bar" | "other";
+export type LocationMainCategory = "accommodation" | "bitcoin" | "food_drink" | "other" | "retail" | "services";
 export type LocationPaymentStatus = "lightning" | "btc_only" | "neither";
 export type LocationWallet = "wallet_of_satoshi" | "muun" | "breez" | "blw" | "eclair" | "zap" | "phoenix" | "blue_wallet" | "other";
 export type LocationReportReason = "missing" | "no_lightning_or_btc" | "illegal_service" | "poor_service" | "other";
@@ -11,6 +12,7 @@ export type Location = {
   latitude: number;
   longitude: number;
   category: LocationCategory;
+  main_category: LocationMainCategory;
   website_url: string | null;
   phone: string | null;
   address: string | null;
@@ -28,6 +30,7 @@ export type CreateLocationPayload = {
   latitude: number;
   longitude: number;
   category: LocationCategory;
+  mainCategory: LocationMainCategory;
   websiteUrl?: string;
   imageUrl?: string;
   schedules?: string;

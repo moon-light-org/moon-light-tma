@@ -535,6 +535,54 @@ button {
   background: #f7f8fa;
 }
 
+.location-detail-header {
+  align-items: flex-start;
+}
+
+.location-detail-title {
+  min-width: 0;
+}
+
+.location-detail-title h3 {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.location-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.location-detail-category,
+.location-detail-verification {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.location-detail-category {
+  color: #172554;
+  background: #e8eefc;
+}
+
+.location-detail-verification.is-verified {
+  color: #92400e;
+  background: #fff3cf;
+}
+
+.location-detail-verification.is-unverified {
+  color: #475569;
+  background: #edf0f4;
+}
+
 .location-detail-hero {
   margin: 12px 14px 2px;
   border-radius: 16px;
