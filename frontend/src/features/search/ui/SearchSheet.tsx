@@ -32,26 +32,29 @@ export function SearchSheet({
   const [query, setQuery] = useState("");
   const [remoteResults, setRemoteResults] = useState<Location[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [viewportFrame, setViewportFrame] = useState<{ height: number; offsetTop: number } | null>(null);
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined" || !window.visualViewport) {
-      setKeyboardOffset(0);
+      setViewportFrame(null);
       return;
     }
 
     const viewport = window.visualViewport;
-    const updateKeyboardOffset = () => {
-      setKeyboardOffset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+    const updateViewportFrame = () => {
+      setViewportFrame({
+        height: viewport.height,
+        offsetTop: viewport.offsetTop,
+      });
     };
 
-    updateKeyboardOffset();
-    viewport.addEventListener("resize", updateKeyboardOffset);
-    viewport.addEventListener("scroll", updateKeyboardOffset);
+    updateViewportFrame();
+    viewport.addEventListener("resize", updateViewportFrame);
+    viewport.addEventListener("scroll", updateViewportFrame);
 
     return () => {
-      viewport.removeEventListener("resize", updateKeyboardOffset);
-      viewport.removeEventListener("scroll", updateKeyboardOffset);
+      viewport.removeEventListener("resize", updateViewportFrame);
+      viewport.removeEventListener("scroll", updateViewportFrame);
     };
   }, [isOpen]);
 
@@ -132,13 +135,17 @@ export function SearchSheet({
   };
 
   return (
-    <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Search locations">
+    <div
+      className="sheet-backdrop sheet-backdrop--search"
+      style={viewportFrame ? { top: viewportFrame.offsetTop, height: viewportFrame.height, bottom: "auto" } : undefined}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search locations"
+    >
       <div
         className="bottom-sheet search-sheet"
-        style={{
-          maxHeight: keyboardOffset > 0 ? `calc(100vh - ${keyboardOffset}px - 12px)` : undefined,
-          transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : undefined,
-        }}
+        style={viewportFrame ? { height: viewportFrame.height, maxHeight: viewportFrame.height } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sheet-handle" />

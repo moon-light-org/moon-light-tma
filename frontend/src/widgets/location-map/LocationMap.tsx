@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
-import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
+import Map, { Layer, Marker, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection, Point } from "geojson";
-import type { Location, LocationMainCategory } from "../../entities/location/model/types";
+import { MAIN_CATEGORY_BY_VALUE } from "../../entities/location/model/mainCategories";
+import type { Location } from "../../entities/location/model/types";
 
 type MapProps = {
   locations: Location[];
@@ -23,180 +24,10 @@ type MapProps = {
 const SOURCE_ID = "saved-locations";
 const CLUSTER_LAYER_ID = "clusters";
 const CLUSTER_COUNT_LAYER_ID = "cluster-count";
-const POINT_FALLBACK_LAYER_ID = "unclustered-fallback";
-const POINT_LAYER_ID = "unclustered";
 const USER_LOCATION_SOURCE_ID = "user-location";
 const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
 const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
 const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
-
-const markerCategories: LocationMainCategory[] = ["accommodation", "bitcoin", "food_drink", "other", "retail", "services"];
-
-function strokeLine(context: CanvasRenderingContext2D, draw: () => void) {
-  context.beginPath();
-  draw();
-  context.stroke();
-}
-
-function drawCategoryIcon(context: CanvasRenderingContext2D, category: LocationMainCategory) {
-  context.save();
-  context.strokeStyle = "#ffffff";
-  context.fillStyle = "#ffffff";
-  context.lineWidth = 2.1;
-  context.lineCap = "round";
-  context.lineJoin = "round";
-
-  if (category === "bitcoin") {
-    context.font = "700 19px Arial, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText("₿", 24, 24);
-  } else if (category === "food_drink") {
-    strokeLine(context, () => {
-      context.moveTo(18, 16);
-      context.lineTo(18, 31);
-      context.moveTo(15, 16);
-      context.lineTo(15, 23);
-      context.moveTo(21, 16);
-      context.lineTo(21, 23);
-      context.moveTo(15, 23);
-      context.lineTo(21, 23);
-      context.moveTo(28, 16);
-      context.lineTo(28, 31);
-      context.moveTo(28, 16);
-      context.quadraticCurveTo(34, 20, 28, 25);
-    });
-  } else if (category === "accommodation") {
-    strokeLine(context, () => {
-      context.moveTo(15, 19);
-      context.lineTo(15, 31);
-      context.moveTo(15, 25);
-      context.lineTo(33, 25);
-      context.moveTo(33, 23);
-      context.quadraticCurveTo(33, 20, 30, 20);
-      context.lineTo(23, 20);
-      context.quadraticCurveTo(20, 20, 20, 23);
-      context.moveTo(33, 25);
-      context.lineTo(33, 31);
-    });
-  } else if (category === "retail") {
-    strokeLine(context, () => {
-      context.moveTo(16, 21);
-      context.lineTo(32, 21);
-      context.lineTo(30, 32);
-      context.lineTo(18, 32);
-      context.closePath();
-      context.moveTo(20, 21);
-      context.quadraticCurveTo(20, 16, 24, 16);
-      context.quadraticCurveTo(28, 16, 28, 21);
-    });
-  } else if (category === "services") {
-    strokeLine(context, () => {
-      context.moveTo(17, 31);
-      context.lineTo(31, 17);
-      context.moveTo(19, 16);
-      context.lineTo(24, 21);
-      context.moveTo(29, 27);
-      context.lineTo(32, 30);
-      context.moveTo(14, 28);
-      context.lineTo(18, 32);
-    });
-  } else {
-    for (const [x, y] of [[17, 17], [25, 17], [17, 25], [25, 25]]) {
-      context.beginPath();
-      context.rect(x, y, 5, 5);
-      context.fill();
-    }
-  }
-
-  context.restore();
-}
-
-function rasterizeMarker(category: LocationMainCategory, verified: boolean): ImageData {
-  const stroke = verified ? "#f29900" : "#cbd5e1";
-  const spot = verified ? "#f29900" : "#f6b544";
-  const width = 48;
-  const height = 56;
-  const pixelRatio = 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = width * pixelRatio;
-  canvas.height = height * pixelRatio;
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("Canvas is unavailable");
-  }
-
-  context.scale(pixelRatio, pixelRatio);
-  context.shadowColor = "rgba(15, 23, 42, 0.22)";
-  context.shadowBlur = 5;
-  context.shadowOffsetY = 3;
-  context.fillStyle = "#ffffff";
-  context.strokeStyle = "#ffffff";
-  context.lineWidth = 5;
-  context.beginPath();
-  context.moveTo(24, 53);
-  context.bezierCurveTo(21, 45, 6, 37, 6, 23);
-  context.arc(24, 23, 18, Math.PI, 0, false);
-  context.bezierCurveTo(42, 37, 27, 45, 24, 53);
-  context.closePath();
-  context.fill();
-  context.stroke();
-
-  context.shadowColor = "transparent";
-  context.lineWidth = 2;
-  context.strokeStyle = stroke;
-  context.beginPath();
-  context.moveTo(24, 50);
-  context.bezierCurveTo(20, 42, 9, 35, 9, 23);
-  context.arc(24, 23, 15, Math.PI, 0, false);
-  context.bezierCurveTo(39, 35, 28, 42, 24, 50);
-  context.closePath();
-  context.fillStyle = "#ffffff";
-  context.fill();
-  context.stroke();
-
-  context.beginPath();
-  context.arc(24, 24, 13.5, 0, Math.PI * 2);
-  context.fillStyle = spot;
-  context.fill();
-  context.strokeStyle = "#ffffff";
-  context.stroke();
-
-  drawCategoryIcon(context, category);
-
-  if (verified) {
-    context.beginPath();
-    context.arc(35, 10, 8, 0, Math.PI * 2);
-    context.fillStyle = "#1a73e8";
-    context.fill();
-    context.lineWidth = 2;
-    context.strokeStyle = "#ffffff";
-    context.stroke();
-    context.fillStyle = "#ffffff";
-    context.beginPath();
-    context.moveTo(36, 4);
-    context.lineTo(31, 11);
-    context.lineTo(35, 11);
-    context.lineTo(34, 17);
-    context.lineTo(39, 9);
-    context.lineTo(35, 9);
-    context.closePath();
-    context.fill();
-  }
-
-  return context.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-function registerMarkerImages(map: ReturnType<MapRef["getMap"]>) {
-  for (const category of markerCategories) {
-    for (const verified of [false, true]) {
-    const id = `${category}-${verified ? "verified" : "unverified"}`;
-    if (map.hasImage(id)) continue;
-    const image = rasterizeMarker(category, verified);
-    if (!map.hasImage(id)) map.addImage(id, image, { pixelRatio: 2 });
-    }
-  }
-}
 
 function toGeoJson(locations: Location[], selectedLocationId: number | null): FeatureCollection<Point> {
   return {
@@ -237,6 +68,10 @@ export function LocationMap({
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const geoJson = useMemo(() => toGeoJson(locations, selectedLocationId), [locations, selectedLocationId]);
+  const markerLocations = useMemo(
+    () => locations.filter((location) => Number.isFinite(location.latitude) && Number.isFinite(location.longitude)),
+    [locations]
+  );
   const userLocationGeoJson = useMemo<FeatureCollection<Point>>(
     () => ({
       type: "FeatureCollection",
@@ -313,27 +148,12 @@ export function LocationMap({
       return;
     }
 
-    if (feature?.layer?.id === POINT_LAYER_ID || feature?.layer?.id === POINT_FALLBACK_LAYER_ID) {
-      const id = Number(feature.properties?.id);
-      const selected = locations.find((location) => location.id === id) ?? null;
-      onLocationSelect(selected);
-      return;
-    }
-
     onLocationSelect(null);
     if (isPickingLocation) onMapPickLocation(event.lngLat.lat, event.lngLat.lng);
   };
 
   const handleMapLoad = () => {
     emitViewportBounds();
-    const map = mapRef.current?.getMap();
-    if (map) {
-      try {
-        registerMarkerImages(map);
-      } catch (error) {
-        console.error("[map] Failed to register category markers", error);
-      }
-    }
   };
 
   return (
@@ -346,7 +166,7 @@ export function LocationMap({
       }}
       mapStyle={MAP_STYLE_URL}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-      interactiveLayerIds={[CLUSTER_LAYER_ID, POINT_LAYER_ID, POINT_FALLBACK_LAYER_ID]}
+      interactiveLayerIds={[CLUSTER_LAYER_ID]}
       onLoad={handleMapLoad}
       onMoveEnd={emitViewportBounds}
       onClick={handleMapClick}
@@ -383,31 +203,36 @@ export function LocationMap({
             "text-color": "#ffffff",
           }}
         />
-        <Layer
-          id={POINT_FALLBACK_LAYER_ID}
-          type="circle"
-          filter={["!", ["has", "point_count"]]}
-          paint={{
-            "circle-color": "#ffffff",
-            "circle-radius": ["case", ["get", "selected"], 12, 9],
-            "circle-stroke-color": ["case", ["get", "isApproved"], "#f29900", "#cbd5e1"],
-            "circle-stroke-width": ["case", ["get", "isApproved"], 3, 2],
-          }}
-        />
-        <Layer
-          id={POINT_LAYER_ID}
-          type="symbol"
-          filter={["!", ["has", "point_count"]]}
-          layout={{
-            "icon-image": ["concat", ["get", "mainCategory"], ["case", ["get", "isApproved"], "-verified", "-unverified"]],
-            "icon-size": ["case", ["get", "selected"], 1.28, 0.88],
-            "icon-anchor": "bottom",
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true,
-            "symbol-sort-key": ["case", ["get", "selected"], 10, ["get", "isApproved"], 5, 1],
-          }}
-        />
       </Source>
+      {markerLocations.map((location) => {
+        const category = MAIN_CATEGORY_BY_VALUE[location.main_category];
+        const Icon = category.Icon;
+        const isSelected = location.id === selectedLocationId;
+        return (
+          <Marker
+            key={location.id}
+            latitude={location.latitude}
+            longitude={location.longitude}
+            anchor="bottom"
+            style={{ zIndex: isSelected ? 2 : 1 }}
+          >
+            <button
+              type="button"
+              className={`map-location-marker${isSelected ? " is-selected" : ""}${location.is_approved ? " is-approved" : ""}`}
+              aria-label={location.name}
+              onClick={(event) => {
+                event.stopPropagation();
+                onLocationSelect(location);
+              }}
+            >
+              <span className="map-location-marker__spot">
+                <Icon size={18} strokeWidth={2.4} />
+              </span>
+              {location.is_approved ? <span className="map-location-marker__badge" aria-hidden="true">L</span> : null}
+            </button>
+          </Marker>
+        );
+      })}
       <Source id={USER_LOCATION_SOURCE_ID} type="geojson" data={userLocationGeoJson}>
         <Layer
           id={USER_LOCATION_ACCURACY_LAYER_ID}

@@ -271,6 +271,75 @@ button {
   transform: scale(0.94);
 }
 
+.map-location-marker {
+  position: relative;
+  width: 48px;
+  height: 56px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #ffffff;
+  filter: drop-shadow(0 4px 7px rgba(15, 23, 42, 0.24));
+  transform-origin: 50% 100%;
+  transition: transform var(--transition), filter var(--transition);
+}
+
+.map-location-marker::before {
+  content: "";
+  position: absolute;
+  inset: 3px 6px 3px;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.map-location-marker.is-approved::before {
+  border-color: #f29900;
+}
+
+.map-location-marker.is-selected {
+  transform: scale(1.22);
+  filter: drop-shadow(0 8px 13px rgba(15, 23, 42, 0.3));
+}
+
+.map-location-marker__spot {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f6b544;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-location-marker.is-approved .map-location-marker__spot {
+  background: #f29900;
+}
+
+.map-location-marker__badge {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: #1a73e8;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 /* ─── Error Toast ────────────────────────────────────────────── */
 .error-toast {
   position: absolute;
@@ -416,6 +485,11 @@ button {
   align-items: flex-end;
   animation: fadeIn 0.18s ease;
   touch-action: pan-y;
+}
+
+.sheet-backdrop--search {
+  align-items: stretch;
+  background: #ffffff;
 }
 
 @keyframes fadeIn {
@@ -1401,7 +1475,10 @@ code {
 
 /* ─── Search Sheet ───────────────────────────────────────── */
 .search-sheet {
-  max-height: min(80vh, calc(100dvh - 12px));
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  animation: fadeIn 0.16s ease;
 }
 
 .search-sheet__input-row {
