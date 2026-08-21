@@ -61,6 +61,38 @@ const DEV_STUB_PROFILE: UserProfile = {
   created_at: new Date().toISOString(),
 };
 
+const GEOLOCATION_PERMISSION_DENIED = 1;
+const GEOLOCATION_POSITION_UNAVAILABLE = 2;
+const GEOLOCATION_TIMEOUT = 3;
+
+function getCurrentBrowserPosition(options: PositionOptions): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+function getGeolocationErrorCode(error: unknown): number | null {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return null;
+  }
+  const code = Number((error as { code?: unknown }).code);
+  return Number.isFinite(code) ? code : null;
+}
+
+function getGeolocationErrorMessage(error: unknown): string {
+  const code = getGeolocationErrorCode(error);
+  if (code === GEOLOCATION_PERMISSION_DENIED) {
+    return "Location permission is blocked. Enable it for Telegram or use search instead.";
+  }
+  if (code === GEOLOCATION_POSITION_UNAVAILABLE) {
+    return "Your current location is unavailable right now. Try again or use search.";
+  }
+  if (code === GEOLOCATION_TIMEOUT) {
+    return "Location is taking too long. Try again or use search.";
+  }
+  return "Could not get your current location. Try again or use search.";
+}
+
 
 export function HomePage() {
   const telegramUser     = useTelegramUser();
@@ -85,6 +117,7 @@ export function HomePage() {
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
   const [isLocationOnboardingOpen, setIsLocationOnboardingOpen] = useState(true);
   const [isLocatingFromOnboarding, setIsLocatingFromOnboarding] = useState(false);
+  const [locationOnboardingError, setLocationOnboardingError] = useState<string | null>(null);
   const [isLoading,          setIsLoading]          = useState(true);
   const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
@@ -198,34 +231,50 @@ export function HomePage() {
     onSuccess,
     silent = false,
   }: {
-    onFailure?: () => void;
+    onFailure?: (message: string) => void;
     onSuccess?: () => void;
     silent?: boolean;
   } = {}) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      const message = "Geolocation is not available on this device.";
       if (!silent) {
-        setError("Geolocation is not available on this device.");
+        setError(message);
       }
-      onFailure?.();
+      onFailure?.(message);
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-        setUserLocation(coords);
-        setFocusCoordinates(coords);
-        setError(null);
-        onSuccess?.();
-      },
-      () => {
-        if (!silent) {
-          setError("Could not get your current location.");
+    const fail = (message: string) => {
+      if (!silent) {
+        setError(message);
+      }
+      onFailure?.(message);
+    };
+
+    void (async () => {
+      let position: GeolocationPosition;
+      try {
+        position = await getCurrentBrowserPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+      } catch (initialError) {
+        if (getGeolocationErrorCode(initialError) === GEOLOCATION_PERMISSION_DENIED) {
+          fail(getGeolocationErrorMessage(initialError));
+          return;
         }
-        onFailure?.();
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
+
+        try {
+          position = await getCurrentBrowserPosition({ enableHighAccuracy: false, timeout: 14000, maximumAge: 300000 });
+        } catch (fallbackError) {
+          fail(getGeolocationErrorMessage(fallbackError));
+          return;
+        }
+      }
+
+      const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+      setUserLocation(coords);
+      setFocusCoordinates(coords);
+      setError(null);
+      onSuccess?.();
+    })();
   };
 
   const submitOnboardingNickname = async (nickname: string) => {
@@ -401,13 +450,16 @@ export function HomePage() {
 
   const handleWelcomeLocation = () => {
     setIsLocatingFromOnboarding(true);
+    setLocationOnboardingError(null);
     requestUserLocation({
-      onFailure: () => {
+      silent: true,
+      onFailure: (message) => {
         setIsLocatingFromOnboarding(false);
-        setIsLocationOnboardingOpen(false);
+        setLocationOnboardingError(message);
       },
       onSuccess: () => {
         setIsLocatingFromOnboarding(false);
+        setLocationOnboardingError(null);
         setIsLocationOnboardingOpen(false);
       },
     });
@@ -659,8 +711,10 @@ export function HomePage() {
           {isLocationOnboardingOpen && !isOnboardingOpen ? (
             <LocationOnboardingPrompt
               isLocating={isLocatingFromOnboarding}
+              error={locationOnboardingError}
               onShareLocation={handleWelcomeLocation}
               onSearch={() => {
+                setLocationOnboardingError(null);
                 setIsLocationOnboardingOpen(false);
                 setCanRenderMap(true);
                 setIsSearchOpen(true);

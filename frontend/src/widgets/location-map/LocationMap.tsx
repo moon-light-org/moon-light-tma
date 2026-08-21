@@ -29,7 +29,7 @@ const POINT_LAYER_ID = "unclustered";
 const USER_LOCATION_SOURCE_ID = "user-location";
 const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
 const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
-const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
 
 const markerIconPaths: Record<LocationMainCategory, string> = {
   accommodation: '<path d="M7 25v-8m0 4h18a4 4 0 0 1 4 4v4M7 29v-8h7a4 4 0 0 1 4 4v4M7 29h22"/>',
@@ -41,13 +41,13 @@ const markerIconPaths: Record<LocationMainCategory, string> = {
 };
 
 function markerSvg(category: LocationMainCategory, verified: boolean): string {
-  const fill = verified ? "#172554" : "#ffffff";
-  const stroke = verified ? "#172554" : "#64748b";
-  const icon = verified ? "#ffffff" : "#334155";
+  const stroke = verified ? "#f29900" : "#cbd5e1";
+  const spot = verified ? "#f29900" : "#f6b544";
+  const icon = "#ffffff";
   const badge = verified
-    ? '<circle cx="35" cy="10" r="8" fill="#f59e0b" stroke="#fff" stroke-width="2"/><path d="m36 4-5 7h4l-1 6 5-8h-4l1-5Z" fill="#fff" stroke="none"/>'
+    ? '<circle cx="35" cy="10" r="8" fill="#1a73e8" stroke="#fff" stroke-width="2"/><path d="m36 4-5 7h4l-1 6 5-8h-4l1-5Z" fill="#fff" stroke="none"/>'
     : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56"><path d="M24 53C21 45 6 37 6 23a18 18 0 1 1 36 0c0 14-15 22-18 30Z" fill="${fill}" stroke="#fff" stroke-width="5"/><path d="M24 50C20 42 9 35 9 23a15 15 0 1 1 30 0c0 12-11 19-15 27Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><g transform="translate(6 3)" color="${icon}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${markerIconPaths[category]}</g>${badge}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56"><defs><filter id="shadow" x="-25%" y="-18%" width="150%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.4" flood-color="#0f172a" flood-opacity="0.22"/></filter></defs><path d="M24 53C21 45 6 37 6 23a18 18 0 1 1 36 0c0 14-15 22-18 30Z" fill="#ffffff" stroke="#ffffff" stroke-width="5" filter="url(#shadow)"/><path d="M24 50C20 42 9 35 9 23a15 15 0 1 1 30 0c0 12-11 19-15 27Z" fill="#ffffff" stroke="${stroke}" stroke-width="2"/><circle cx="24" cy="24" r="13.5" fill="${spot}" stroke="#ffffff" stroke-width="2"/><g transform="translate(6 3)" color="${icon}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${markerIconPaths[category]}</g>${badge}</svg>`;
 }
 
 function rasterizeMarker(svg: string): Promise<ImageData> {
@@ -251,10 +251,10 @@ export function LocationMap({
           type="circle"
           filter={["has", "point_count"]}
           paint={{
-            "circle-color": "#f7931a",
+            "circle-color": "#f29900",
             "circle-radius": ["step", ["get", "point_count"], 18, 20, 22, 50, 26],
             "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2.5,
+            "circle-stroke-width": 3,
           }}
         />
         <Layer
@@ -275,10 +275,10 @@ export function LocationMap({
           type="circle"
           filter={["!", ["has", "point_count"]]}
           paint={{
-            "circle-color": ["case", ["get", "isApproved"], "#172554", "#ffffff"],
+            "circle-color": "#ffffff",
             "circle-radius": ["case", ["get", "selected"], 12, 9],
-            "circle-stroke-color": ["case", ["get", "isApproved"], "#f59e0b", "#64748b"],
-            "circle-stroke-width": ["case", ["get", "isApproved"], 3, 2.5],
+            "circle-stroke-color": ["case", ["get", "isApproved"], "#f29900", "#cbd5e1"],
+            "circle-stroke-width": ["case", ["get", "isApproved"], 3, 2],
           }}
         />
         <Layer

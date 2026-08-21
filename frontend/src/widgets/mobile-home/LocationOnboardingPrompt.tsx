@@ -2,12 +2,14 @@ import { MapPin, Navigation, Search } from "lucide-react";
 
 type LocationOnboardingPromptProps = {
   isLocating: boolean;
+  error: string | null;
   onShareLocation: () => void;
   onSearch: () => void;
 };
 
 export function LocationOnboardingPrompt({
   isLocating,
+  error,
   onShareLocation,
   onSearch,
 }: LocationOnboardingPromptProps) {
@@ -22,6 +24,7 @@ export function LocationOnboardingPrompt({
         <p className="location-onboarding-card__copy">
           Share your location to start nearby, or jump straight into search if you already know what you need.
         </p>
+        {error ? <p className="location-onboarding-card__error">{error}</p> : null}
         <button type="button" className="location-onboarding-card__search-preview" disabled={isLocating} onClick={onSearch}>
           <Search size={17} />
           <span>Search shops, restaurants, bars...</span>

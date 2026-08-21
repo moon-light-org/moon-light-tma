@@ -1912,6 +1912,17 @@ button.onboarding-panel {
   margin-bottom: 14px;
 }
 
+.location-onboarding-card__error {
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: #fff3f2;
+  color: var(--c-danger);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .location-onboarding-card__search-preview {
   width: 100%;
   min-height: 50px;
