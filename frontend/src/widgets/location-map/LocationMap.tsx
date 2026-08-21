@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
-import type { Map as MapLibreMap } from "maplibre-gl";
 import type { FeatureCollection, Point } from "geojson";
 import type { Location, LocationMainCategory } from "../../entities/location/model/types";
 
@@ -31,63 +30,172 @@ const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
 const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
 const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
 
-const markerIconPaths: Record<LocationMainCategory, string> = {
-  accommodation: '<path d="M7 25v-8m0 4h18a4 4 0 0 1 4 4v4M7 29v-8h7a4 4 0 0 1 4 4v4M7 29h22"/>',
-  bitcoin: '<text x="18" y="28" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="currentColor" stroke="none">&#8383;</text>',
-  food_drink: '<path d="M10 13v8m4-8v8m-2-8v16m9-16v16m0-16c5 3 5 9 0 11"/>',
-  other: '<rect x="9" y="13" width="7" height="7" rx="1"/><rect x="20" y="13" width="7" height="7" rx="1"/><rect x="9" y="24" width="7" height="7" rx="1"/><rect x="20" y="24" width="7" height="7" rx="1"/>',
-  retail: '<path d="M9 18h18l-2 13H11L9 18Z"/><path d="M14 19v-2a4 4 0 0 1 8 0v2"/>',
-  services: '<path d="m11 29 9-9m-7-6a6 6 0 0 0 7 7l8 8-3 3-8-8a6 6 0 0 1-7-7l4 2 3-3-2-4Z"/>',
-};
+const markerCategories: LocationMainCategory[] = ["accommodation", "bitcoin", "food_drink", "other", "retail", "services"];
 
-function markerSvg(category: LocationMainCategory, verified: boolean): string {
+function strokeLine(context: CanvasRenderingContext2D, draw: () => void) {
+  context.beginPath();
+  draw();
+  context.stroke();
+}
+
+function drawCategoryIcon(context: CanvasRenderingContext2D, category: LocationMainCategory) {
+  context.save();
+  context.strokeStyle = "#ffffff";
+  context.fillStyle = "#ffffff";
+  context.lineWidth = 2.1;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+
+  if (category === "bitcoin") {
+    context.font = "700 19px Arial, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("₿", 24, 24);
+  } else if (category === "food_drink") {
+    strokeLine(context, () => {
+      context.moveTo(18, 16);
+      context.lineTo(18, 31);
+      context.moveTo(15, 16);
+      context.lineTo(15, 23);
+      context.moveTo(21, 16);
+      context.lineTo(21, 23);
+      context.moveTo(15, 23);
+      context.lineTo(21, 23);
+      context.moveTo(28, 16);
+      context.lineTo(28, 31);
+      context.moveTo(28, 16);
+      context.quadraticCurveTo(34, 20, 28, 25);
+    });
+  } else if (category === "accommodation") {
+    strokeLine(context, () => {
+      context.moveTo(15, 19);
+      context.lineTo(15, 31);
+      context.moveTo(15, 25);
+      context.lineTo(33, 25);
+      context.moveTo(33, 23);
+      context.quadraticCurveTo(33, 20, 30, 20);
+      context.lineTo(23, 20);
+      context.quadraticCurveTo(20, 20, 20, 23);
+      context.moveTo(33, 25);
+      context.lineTo(33, 31);
+    });
+  } else if (category === "retail") {
+    strokeLine(context, () => {
+      context.moveTo(16, 21);
+      context.lineTo(32, 21);
+      context.lineTo(30, 32);
+      context.lineTo(18, 32);
+      context.closePath();
+      context.moveTo(20, 21);
+      context.quadraticCurveTo(20, 16, 24, 16);
+      context.quadraticCurveTo(28, 16, 28, 21);
+    });
+  } else if (category === "services") {
+    strokeLine(context, () => {
+      context.moveTo(17, 31);
+      context.lineTo(31, 17);
+      context.moveTo(19, 16);
+      context.lineTo(24, 21);
+      context.moveTo(29, 27);
+      context.lineTo(32, 30);
+      context.moveTo(14, 28);
+      context.lineTo(18, 32);
+    });
+  } else {
+    for (const [x, y] of [[17, 17], [25, 17], [17, 25], [25, 25]]) {
+      context.beginPath();
+      context.rect(x, y, 5, 5);
+      context.fill();
+    }
+  }
+
+  context.restore();
+}
+
+function rasterizeMarker(category: LocationMainCategory, verified: boolean): ImageData {
   const stroke = verified ? "#f29900" : "#cbd5e1";
   const spot = verified ? "#f29900" : "#f6b544";
-  const icon = "#ffffff";
-  const badge = verified
-    ? '<circle cx="35" cy="10" r="8" fill="#1a73e8" stroke="#fff" stroke-width="2"/><path d="m36 4-5 7h4l-1 6 5-8h-4l1-5Z" fill="#fff" stroke="none"/>'
-    : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56"><defs><filter id="shadow" x="-25%" y="-18%" width="150%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2.4" flood-color="#0f172a" flood-opacity="0.22"/></filter></defs><path d="M24 53C21 45 6 37 6 23a18 18 0 1 1 36 0c0 14-15 22-18 30Z" fill="#ffffff" stroke="#ffffff" stroke-width="5" filter="url(#shadow)"/><path d="M24 50C20 42 9 35 9 23a15 15 0 1 1 30 0c0 12-11 19-15 27Z" fill="#ffffff" stroke="${stroke}" stroke-width="2"/><circle cx="24" cy="24" r="13.5" fill="${spot}" stroke="#ffffff" stroke-width="2"/><g transform="translate(6 3)" color="${icon}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${markerIconPaths[category]}</g>${badge}</svg>`;
+  const width = 48;
+  const height = 56;
+  const pixelRatio = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * pixelRatio;
+  canvas.height = height * pixelRatio;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas is unavailable");
+  }
+
+  context.scale(pixelRatio, pixelRatio);
+  context.shadowColor = "rgba(15, 23, 42, 0.22)";
+  context.shadowBlur = 5;
+  context.shadowOffsetY = 3;
+  context.fillStyle = "#ffffff";
+  context.strokeStyle = "#ffffff";
+  context.lineWidth = 5;
+  context.beginPath();
+  context.moveTo(24, 53);
+  context.bezierCurveTo(21, 45, 6, 37, 6, 23);
+  context.arc(24, 23, 18, Math.PI, 0, false);
+  context.bezierCurveTo(42, 37, 27, 45, 24, 53);
+  context.closePath();
+  context.fill();
+  context.stroke();
+
+  context.shadowColor = "transparent";
+  context.lineWidth = 2;
+  context.strokeStyle = stroke;
+  context.beginPath();
+  context.moveTo(24, 50);
+  context.bezierCurveTo(20, 42, 9, 35, 9, 23);
+  context.arc(24, 23, 15, Math.PI, 0, false);
+  context.bezierCurveTo(39, 35, 28, 42, 24, 50);
+  context.closePath();
+  context.fillStyle = "#ffffff";
+  context.fill();
+  context.stroke();
+
+  context.beginPath();
+  context.arc(24, 24, 13.5, 0, Math.PI * 2);
+  context.fillStyle = spot;
+  context.fill();
+  context.strokeStyle = "#ffffff";
+  context.stroke();
+
+  drawCategoryIcon(context, category);
+
+  if (verified) {
+    context.beginPath();
+    context.arc(35, 10, 8, 0, Math.PI * 2);
+    context.fillStyle = "#1a73e8";
+    context.fill();
+    context.lineWidth = 2;
+    context.strokeStyle = "#ffffff";
+    context.stroke();
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.moveTo(36, 4);
+    context.lineTo(31, 11);
+    context.lineTo(35, 11);
+    context.lineTo(34, 17);
+    context.lineTo(39, 9);
+    context.lineTo(35, 9);
+    context.closePath();
+    context.fill();
+  }
+
+  return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function rasterizeMarker(svg: string): Promise<ImageData> {
-  return new Promise((resolve, reject) => {
-    const width = 48;
-    const height = 56;
-    const pixelRatio = 2;
-    const canvas = document.createElement("canvas");
-    canvas.width = width * pixelRatio;
-    canvas.height = height * pixelRatio;
-    const context = canvas.getContext("2d");
-    if (!context) {
-      reject(new Error("Canvas is unavailable"));
-      return;
-    }
-
-    const image = new Image();
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    image.onload = () => {
-      context.scale(pixelRatio, pixelRatio);
-      context.drawImage(image, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-      resolve(context.getImageData(0, 0, canvas.width, canvas.height));
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Could not rasterize map marker"));
-    };
-    image.src = url;
-  });
-}
-
-async function registerMarkerImages(map: MapLibreMap) {
-  const categories = Object.keys(markerIconPaths) as LocationMainCategory[];
-  await Promise.all(categories.flatMap((category) => [false, true].map(async (verified) => {
+function registerMarkerImages(map: ReturnType<MapRef["getMap"]>) {
+  for (const category of markerCategories) {
+    for (const verified of [false, true]) {
     const id = `${category}-${verified ? "verified" : "unverified"}`;
-    if (map.hasImage(id)) return;
-    const image = await rasterizeMarker(markerSvg(category, verified));
+    if (map.hasImage(id)) continue;
+    const image = rasterizeMarker(category, verified);
     if (!map.hasImage(id)) map.addImage(id, image, { pixelRatio: 2 });
-  })));
+    }
+  }
 }
 
 function toGeoJson(locations: Location[], selectedLocationId: number | null): FeatureCollection<Point> {
@@ -156,10 +264,11 @@ export function LocationMap({
     if (!map || !focusCoordinates) {
       return;
     }
-    map.easeTo({
+    map.flyTo({
       center: [focusCoordinates.longitude, focusCoordinates.latitude],
-      zoom: Math.max(map.getZoom(), 14),
-      duration: 450,
+      zoom: Math.max(map.getZoom(), 15),
+      duration: 900,
+      essential: true,
     });
   }, [focusCoordinates]);
 
@@ -218,9 +327,13 @@ export function LocationMap({
   const handleMapLoad = () => {
     emitViewportBounds();
     const map = mapRef.current?.getMap();
-    if (map) void registerMarkerImages(map).catch((error: unknown) => {
-      console.error("[map] Failed to register category markers", error);
-    });
+    if (map) {
+      try {
+        registerMarkerImages(map);
+      } catch (error) {
+        console.error("[map] Failed to register category markers", error);
+      }
+    }
   };
 
   return (
@@ -289,7 +402,8 @@ export function LocationMap({
             "icon-image": ["concat", ["get", "mainCategory"], ["case", ["get", "isApproved"], "-verified", "-unverified"]],
             "icon-size": ["case", ["get", "selected"], 1.28, 0.88],
             "icon-anchor": "bottom",
-            "icon-allow-overlap": ["get", "selected"],
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
             "symbol-sort-key": ["case", ["get", "selected"], 10, ["get", "isApproved"], 5, 1],
           }}
         />

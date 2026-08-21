@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Search, MapPin } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { Location } from "../../../entities/location/model/types";
@@ -28,9 +28,32 @@ export function SearchSheet({
   onClose,
   onSelectLocation,
 }: SearchSheetProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
   const [remoteResults, setRemoteResults] = useState<Location[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined" || !window.visualViewport) {
+      setKeyboardOffset(0);
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    const updateKeyboardOffset = () => {
+      setKeyboardOffset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+    };
+
+    updateKeyboardOffset();
+    viewport.addEventListener("resize", updateKeyboardOffset);
+    viewport.addEventListener("scroll", updateKeyboardOffset);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardOffset);
+      viewport.removeEventListener("scroll", updateKeyboardOffset);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -97,6 +120,7 @@ export function SearchSheet({
   if (!isOpen) return null;
 
   const handleSelect = (location: Location) => {
+    inputRef.current?.blur();
     onSelectLocation(location);
     onClose();
   };
@@ -109,7 +133,14 @@ export function SearchSheet({
 
   return (
     <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Search locations">
-      <div className="bottom-sheet search-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bottom-sheet search-sheet"
+        style={{
+          maxHeight: keyboardOffset > 0 ? `calc(100vh - ${keyboardOffset}px - 12px)` : undefined,
+          transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : undefined,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="sheet-handle" />
 
         <div className="search-sheet__input-row">
@@ -117,6 +148,7 @@ export function SearchSheet({
             <Search size={16} />
           </span>
           <input
+            ref={inputRef}
             className="search-sheet__input"
             type="search"
             placeholder="Search BTC places…"

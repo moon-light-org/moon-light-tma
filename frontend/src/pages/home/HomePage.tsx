@@ -351,10 +351,14 @@ export function HomePage() {
     );
   };
 
-  const visibleLocations =
+  const categoryFilteredLocations =
     selectedCategories.length === 0
       ? locations
       : locations.filter((l) => selectedCategories.includes(l.main_category));
+  const visibleLocations =
+    selectedLocation && !categoryFilteredLocations.some((location) => location.id === selectedLocation.id)
+      ? [selectedLocation, ...categoryFilteredLocations]
+      : categoryFilteredLocations;
 
   useEffect(() => {
     if (!viewportBounds) {
@@ -703,6 +707,9 @@ export function HomePage() {
             telegramInitData={telegramInitData}
             onClose={() => setIsSearchOpen(false)}
             onSelectLocation={(loc) => {
+              setLocations((current) =>
+                current.some((location) => location.id === loc.id) ? current : [loc, ...current]
+              );
               setSelectedLocation(loc);
               setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
             }}

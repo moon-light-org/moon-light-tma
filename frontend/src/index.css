@@ -1401,7 +1401,7 @@ code {
 
 /* ─── Search Sheet ───────────────────────────────────────── */
 .search-sheet {
-  max-height: 80vh;
+  max-height: min(80vh, calc(100dvh - 12px));
 }
 
 .search-sheet__input-row {
@@ -1441,6 +1441,7 @@ code {
 
 .search-sheet__results {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 8px 0 8px;
