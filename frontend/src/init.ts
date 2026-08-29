@@ -13,6 +13,9 @@ import {
   retrieveLaunchParams,
   emitEvent,
   miniApp,
+  mountSwipeBehavior,
+  disableVerticalSwipes,
+  viewport,
 } from '@telegram-apps/sdk-react';
 
 /**
@@ -63,7 +66,15 @@ export async function init(options: {
     bindThemeParamsCssVars();
   }
 
+  // Vertical swipes otherwise drag the whole mini app while the user pans or
+  // pinches the map, so the map never receives the gesture.
+  if (mountSwipeBehavior.isAvailable()) {
+    mountSwipeBehavior();
+    disableVerticalSwipes.ifAvailable();
+  }
+
   mountViewport.isAvailable() && mountViewport().then(() => {
     bindViewportCssVars();
+    viewport.expand.ifAvailable();
   });
 }

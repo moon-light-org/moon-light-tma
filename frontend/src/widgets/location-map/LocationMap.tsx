@@ -19,6 +19,7 @@ type MapProps = {
   initialCenter?: { latitude: number; longitude: number } | null;
   focusCoordinates?: { latitude: number; longitude: number } | null;
   userLocation?: { latitude: number; longitude: number } | null;
+  onMapReady?: (map: MapRef | null) => void;
 };
 
 const SOURCE_ID = "saved-locations";
@@ -65,8 +66,13 @@ export function LocationMap({
   initialCenter = null,
   focusCoordinates = null,
   userLocation = null,
+  onMapReady,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
+
+  useEffect(() => {
+    return () => onMapReady?.(null);
+  }, [onMapReady]);
   const geoJson = useMemo(() => toGeoJson(locations, selectedLocationId), [locations, selectedLocationId]);
   const markerLocations = useMemo(
     () => locations.filter((location) => Number.isFinite(location.latitude) && Number.isFinite(location.longitude)),
@@ -154,6 +160,7 @@ export function LocationMap({
 
   const handleMapLoad = () => {
     emitViewportBounds();
+    onMapReady?.(mapRef.current);
   };
 
   return (

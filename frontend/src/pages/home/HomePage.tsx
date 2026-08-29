@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Map, MapPin } from "lucide-react";
+import type { MapRef } from "react-map-gl/maplibre";
 import {
   fetchLocations,
   createLocation,
@@ -153,6 +154,10 @@ export function HomePage() {
     maxLon: number;
   } | null>(null);
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
+  const mapInstanceRef = useRef<MapRef | null>(null);
+  const handleMapReady = useCallback((map: MapRef | null) => {
+    mapInstanceRef.current = map;
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -484,6 +489,14 @@ export function HomePage() {
     requestUserLocation();
   };
 
+  const handleZoomIn = () => {
+    mapInstanceRef.current?.zoomIn({ duration: 220 });
+  };
+
+  const handleZoomOut = () => {
+    mapInstanceRef.current?.zoomOut({ duration: 220 });
+  };
+
   const openDiscover = () => {
     setLocationOnboardingError(null);
     setIsLocationOnboardingOpen(false);
@@ -726,6 +739,7 @@ export function HomePage() {
             initialCenter={userLocation ?? focusCoordinates ?? undefined}
             focusCoordinates={focusCoordinates}
             userLocation={userLocation}
+            onMapReady={handleMapReady}
           />
 
           {/* Overlaid header: search + filter chips */}
@@ -747,6 +761,8 @@ export function HomePage() {
           <HomeControls
             canLocate={typeof window !== "undefined" && Boolean(window.navigator?.geolocation)}
             onLocateMe={handleLocateMe}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
           />
 
           <LocationDetailSheet

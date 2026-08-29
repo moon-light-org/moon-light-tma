@@ -173,16 +173,19 @@ button {
 /* ─── Filter Chips ───────────────────────────────────────────── */
 .filter-row {
   position: absolute;
-  top: 72px;
+  top: 66px;
   left: 0;
   right: 0;
   z-index: 10;
-  padding: 0 12px;
+  /* Vertical padding keeps the chip shadows from being clipped by the scroll box. */
+  padding: 6px 12px 10px;
   display: flex;
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* Let map gestures pass through the gaps between chips. */
+  pointer-events: none;
 }
 
 .filter-row::-webkit-scrollbar {
@@ -194,6 +197,7 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
+  pointer-events: auto;
   height: 36px;
   padding: 0 14px;
   border-radius: var(--r-pill);
@@ -264,6 +268,33 @@ button {
 .map-btn svg {
   width: 20px;
   height: 20px;
+}
+
+.map-zoom-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  background: var(--c-surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.map-btn--zoom {
+  width: 48px;
+  height: 44px;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--c-text);
+}
+
+.map-btn--zoom + .map-btn--zoom {
+  border-top: 1px solid var(--c-border);
+}
+
+.map-btn--zoom:active {
+  box-shadow: none;
+  background: var(--c-surface2);
+  transform: none;
 }
 
 .map-btn:active {
