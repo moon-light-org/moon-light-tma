@@ -273,43 +273,28 @@ button {
 
 .map-location-marker {
   position: relative;
-  width: 48px;
-  height: 56px;
+  width: 34px;
+  height: 34px;
   border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
   color: #ffffff;
-  filter: drop-shadow(0 4px 7px rgba(15, 23, 42, 0.24));
-  transform-origin: 50% 100%;
+  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.24));
+  transform-origin: 50% 50%;
   transition: transform var(--transition), filter var(--transition);
 }
 
-.map-location-marker::before {
-  content: "";
-  position: absolute;
-  inset: 3px 6px 3px;
-  background: #ffffff;
-  border: 2px solid #cbd5e1;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-}
-
-.map-location-marker.is-approved::before {
-  border-color: #f29900;
-}
-
 .map-location-marker.is-selected {
-  transform: scale(1.22);
-  filter: drop-shadow(0 8px 13px rgba(15, 23, 42, 0.3));
+  transform: scale(1.18);
+  filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.3));
 }
 
 .map-location-marker__spot {
   position: absolute;
-  left: 10px;
-  top: 10px;
-  width: 28px;
-  height: 28px;
+  inset: 0;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #f6b544;
   border: 2px solid #ffffff;
@@ -324,8 +309,8 @@ button {
 
 .map-location-marker__badge {
   position: absolute;
-  right: 4px;
-  top: 2px;
+  right: -2px;
+  top: -2px;
   width: 16px;
   height: 16px;
   border-radius: 50%;

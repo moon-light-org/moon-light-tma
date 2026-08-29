@@ -213,7 +213,7 @@ export function LocationMap({
             key={location.id}
             latitude={location.latitude}
             longitude={location.longitude}
-            anchor="bottom"
+            anchor="center"
             style={{ zIndex: isSelected ? 2 : 1 }}
           >
             <button
