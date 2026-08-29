@@ -21,12 +21,34 @@ type LocationDetailSheetProps = {
   onCreateReport: (payload: CreateLocationReportPayload) => Promise<void>;
 };
 
+const REVIEW_TITLE_MAX_LENGTH = 42;
+
+/** Uses the opening phrase of the comment as the title, trimmed with an ellipsis. */
 function getReviewTitle(review: LocationReview): string {
+  const text = review.text?.trim().replace(/\s+/g, " ") ?? "";
+  if (text) {
+    const [firstPhrase] = text.split(/(?<=[.!?])\s|\s[–—-]\s/);
+    const phrase = (firstPhrase ?? text).trim();
+    const truncated = phrase.length > REVIEW_TITLE_MAX_LENGTH
+      ? phrase.slice(0, REVIEW_TITLE_MAX_LENGTH)
+      : phrase;
+    if (truncated.length < text.length) {
+      return `${truncated.replace(/[\s.,;:!?]+$/, "")}…`;
+    }
+    return truncated;
+  }
+
   if (review.source === "btcmap") return "BTCMap review";
   if (review.payment_status === "lightning") return "Accepts Lightning";
   if (review.payment_status === "btc_only") return "Accepts only BTC";
   if (review.payment_status === "neither") return "Accepts neither Lightning nor BTC";
   return "User review";
+}
+
+function getReviewInitial(review: LocationReview): string {
+  const nickname = review.user_nickname?.trim();
+  if (nickname) return nickname.charAt(0).toUpperCase();
+  return review.source === "btcmap" ? "B" : "U";
 }
 
 function formatReviewDate(value: string): string {
@@ -219,7 +241,7 @@ export function LocationDetailSheet({
                     {reviews.slice(0, 8).map((review) => (
                       <article key={review.id} className="location-review-carousel-card">
                         <div className="location-review-carousel-card__head">
-                          <span className="location-review-carousel-card__avatar">{review.source === "btcmap" ? "B" : "U"}</span>
+                          <span className="location-review-carousel-card__avatar">{getReviewInitial(review)}</span>
                           <strong>{getReviewTitle(review)}</strong>
                         </div>
                         <div className="location-review-carousel-card__meta">

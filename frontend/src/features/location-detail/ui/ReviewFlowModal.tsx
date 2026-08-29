@@ -61,6 +61,12 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
     } catch { /* The parent renders request errors. */ }
   };
   const chooseRating = (option: typeof ratingOptions[number]) => {
+    // Tapping the current rating clears it, so users can get back to no stars.
+    if (rating === option.value) {
+      setRating(null);
+      setRatingDescription(null);
+      return;
+    }
     setRating(option.value);
     setRatingDescription(option.copy);
   };
@@ -90,7 +96,7 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
         <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack("payment")}>Back</button><button type="button" className="review-flow-link review-flow-skip" disabled={isSubmitting} onClick={() => { setWallet(null); setStep("rating"); }}>Skip</button></div></> : null}
       {step === "rating" ? <><span className="onboarding-eyebrow">Step 3 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Rate this place</h1><p>Does this place really merit a star?</p>
         <div className="review-flow-stars" aria-label="Place rating">{ratingOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`review-flow-star ${rating !== null && option.value <= rating ? "active" : ""}`} onClick={() => chooseRating(option)} aria-label={`Rate ${option.value}: ${option.copy}`} aria-pressed={rating === option.value}><Star size={32} fill={rating !== null && option.value <= rating ? "currentColor" : "none"} aria-hidden="true" /></button>)}</div>
-        {ratingDescription ? <p className="review-flow-rating-description" aria-live="polite">{ratingDescription}</p> : null}
+        <p className={`review-flow-rating-description${ratingDescription ? "" : " is-empty"}`} aria-live="polite">{ratingDescription ?? "Tap a star to rate, or tap it again to clear."}</p>
         <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack("wallet")}>Back</button>{rating === null ? <button type="button" className="review-flow-link review-flow-skip" disabled={isSubmitting} onClick={() => { setRating(null); setRatingDescription(null); setStep("comment"); }}>Skip</button> : <button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => setStep("comment")}>Next</button>}</div></> : null}
       {step === "comment" ? <><span className="onboarding-eyebrow">Step 4 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Add a comment</h1><p>This is optional.</p>
         <textarea className="onboarding-input review-flow-textarea" disabled={isSubmitting} placeholder="Write a short review" value={text} onChange={(event) => setText(event.target.value)} maxLength={600} />

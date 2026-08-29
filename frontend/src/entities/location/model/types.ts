@@ -52,6 +52,7 @@ export type LocationReview = {
   source: "app" | "btcmap";
   location_id: number;
   user_id: number | null;
+  user_nickname: string | null;
   payment_status: LocationPaymentStatus | null;
   wallet: LocationWallet | null;
   rating: number | null;
