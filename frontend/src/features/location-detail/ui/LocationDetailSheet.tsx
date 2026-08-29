@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, ShieldAlert, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Map, ShieldAlert, X } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 import { ReviewFlowModal } from "./ReviewFlowModal";
@@ -13,7 +13,10 @@ type LocationDetailSheetProps = {
   photosLoading: boolean;
   reviewsLoading: boolean;
   canContribute: boolean;
+  /** "page" renders full-screen with a back button, for the map-less discover flow. */
+  variant?: "sheet" | "page";
   onClose: () => void;
+  onShowOnMap?: () => void;
   onCreateReview: (payload: CreateLocationReviewPayload) => Promise<void>;
   onCreateReport: (payload: CreateLocationReportPayload) => Promise<void>;
 };
@@ -53,7 +56,9 @@ export function LocationDetailSheet({
   photosLoading,
   reviewsLoading,
   canContribute,
+  variant = "sheet",
   onClose,
+  onShowOnMap,
   onCreateReview,
   onCreateReport,
 }: LocationDetailSheetProps) {
@@ -118,10 +123,14 @@ export function LocationDetailSheet({
     finally { setIsSubmittingReport(false); }
   };
 
-  return (
-    <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Location details">
-      <div className="bottom-sheet location-detail-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" />
+  const isPage = variant === "page";
+
+  const body = (
+      <div
+        className={`bottom-sheet location-detail-sheet${isPage ? " location-detail-sheet--page" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isPage ? null : <div className="sheet-handle" />}
         <div className="location-detail-hero">
           {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__skeleton" aria-hidden="true" />}
         </div>
@@ -136,14 +145,22 @@ export function LocationDetailSheet({
               </span>
             </div>
           </div>
-          <button type="button" className="sheet-close" onClick={onClose} aria-label="Close">
-            <X size={16} />
+          <button type="button" className="sheet-close" onClick={onClose} aria-label={isPage ? "Back to list" : "Close"}>
+            {isPage ? <ArrowLeft size={16} /> : <X size={16} />}
           </button>
         </div>
 
-        <p className="sheet-coords">
-          {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-        </p>
+        <div className="location-detail-location-row">
+          <p className="sheet-coords">
+            {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+          </p>
+          {onShowOnMap ? (
+            <button type="button" className="location-detail-map-link" onClick={onShowOnMap}>
+              <Map size={14} />
+              Show on map
+            </button>
+          ) : null}
+        </div>
 
         <div className="sheet-body location-detail-body">
           <section className="location-detail-section location-detail-description-card">
@@ -266,6 +283,19 @@ export function LocationDetailSheet({
           onSubmit={handleSubmitReport}
         />
       </div>
+  );
+
+  if (isPage) {
+    return (
+      <section className="location-detail-page" role="dialog" aria-modal="true" aria-label="Location details">
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Location details">
+      {body}
     </div>
   );
 }

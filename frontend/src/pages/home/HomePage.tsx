@@ -34,6 +34,7 @@ import type { UserProfile } from "../../entities/user/model/types";
 import { clearCachedProfile, readCachedProfile, writeCachedProfile } from "../../entities/user/model/profileCache";
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
+import { DiscoverView } from "../../features/discover/ui/DiscoverView";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
 import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
@@ -102,6 +103,7 @@ export function HomePage() {
   const [userProfile,        setUserProfile]        = useState<UserProfile | null>(null);
   const [locations,          setLocations]          = useState<Location[]>([]);
   const [selectedLocation,   setSelectedLocation]   = useState<Location | null>(null);
+  const [isDetailOpen,       setIsDetailOpen]       = useState(false);
   const [selectedLocationPhotos, setSelectedLocationPhotos] = useState<LocationPhoto[]>([]);
   const [selectedLocationReviews, setSelectedLocationReviews] = useState<LocationReview[]>([]);
   const [isSelectedLocationPhotosLoading, setIsSelectedLocationPhotosLoading] = useState(false);
@@ -113,6 +115,8 @@ export function HomePage() {
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
+  const [isDiscoverOpen,     setIsDiscoverOpen]     = useState(false);
+  const [isDiscoverLoading,  setIsDiscoverLoading]  = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
   const [isLocationOnboardingOpen, setIsLocationOnboardingOpen] = useState(true);
@@ -396,6 +400,34 @@ export function HomePage() {
     };
   }, [lastFetchedBoundsKey, telegramInitData, viewportBounds]);
 
+  // The discover list has no map, so it cannot rely on viewport-driven fetching.
+  useEffect(() => {
+    if (!isDiscoverOpen || locations.length > 0) {
+      return;
+    }
+    let isActive = true;
+    setIsDiscoverLoading(true);
+    void fetchLocations(telegramInitData, { limit: 100 })
+      .then((loaded) => {
+        if (isActive) {
+          setLocations(loaded);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isActive) {
+          setError(err instanceof Error ? err.message : "Failed to load places");
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsDiscoverLoading(false);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [isDiscoverOpen, locations.length, telegramInitData]);
+
   useEffect(() => {
     if (!selectedLocation) {
       setSelectedLocationPhotos([]);
@@ -450,6 +482,36 @@ export function HomePage() {
 
   const handleLocateMe = () => {
     requestUserLocation();
+  };
+
+  const openDiscover = () => {
+    setLocationOnboardingError(null);
+    setIsLocationOnboardingOpen(false);
+    setIsSearchOpen(false);
+    setIsDiscoverOpen(true);
+  };
+
+  const leaveDiscoverForMap = () => {
+    setIsDetailOpen(false);
+    setIsDiscoverOpen(false);
+    setCanRenderMap(true);
+  };
+
+  const handleShowSelectedOnMap = () => {
+    if (selectedLocation) {
+      setFocusCoordinates({ latitude: selectedLocation.latitude, longitude: selectedLocation.longitude });
+    }
+    leaveDiscoverForMap();
+  };
+
+  const handleOpenLocationDetail = (location: Location | null) => {
+    setSelectedLocation(location);
+    setIsDetailOpen(Boolean(location));
+  };
+
+  const handleCloseLocationDetail = () => {
+    setIsDetailOpen(false);
+    setSelectedLocation(null);
   };
 
   const handleWelcomeLocation = () => {
@@ -651,7 +713,7 @@ export function HomePage() {
   /* ── Main UI ─────────────────────────────────────────── */
   return (
     <main className="map-shell">
-      {canRenderMap ? (
+      {canRenderMap && !isDiscoverOpen ? (
         <>
           {/* Full-screen map */}
           <LocationMap
@@ -659,9 +721,9 @@ export function HomePage() {
             selectedLocationId={selectedLocation?.id ?? null}
             isPickingLocation={isAwaitingMapPickForNewLocation}
             onMapPickLocation={handlePickLocation}
-            onLocationSelect={setSelectedLocation}
+            onLocationSelect={handleOpenLocationDetail}
             onViewportChange={setViewportBounds}
-            initialCenter={userLocation ?? undefined}
+            initialCenter={userLocation ?? focusCoordinates ?? undefined}
             focusCoordinates={focusCoordinates}
             userLocation={userLocation}
           />
@@ -688,14 +750,14 @@ export function HomePage() {
           />
 
           <LocationDetailSheet
-            isOpen={Boolean(selectedLocation)}
+            isOpen={isDetailOpen && Boolean(selectedLocation)}
             location={selectedLocation}
             photos={selectedLocationPhotos}
             reviews={selectedLocationReviews}
             photosLoading={isSelectedLocationPhotosLoading}
             reviewsLoading={isSelectedLocationReviewsLoading}
             canContribute={Boolean(telegramUser && userProfile)}
-            onClose={() => setSelectedLocation(null)}
+            onClose={handleCloseLocationDetail}
             onCreateReview={handleCreateLocationReview}
             onCreateReport={handleCreateLocationReport}
           />
@@ -710,7 +772,7 @@ export function HomePage() {
               setLocations((current) =>
                 current.some((location) => location.id === loc.id) ? current : [loc, ...current]
               );
-              setSelectedLocation(loc);
+              handleOpenLocationDetail(loc);
               setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
             }}
           />
@@ -720,14 +782,36 @@ export function HomePage() {
               isLocating={isLocatingFromOnboarding}
               error={locationOnboardingError}
               onShareLocation={handleWelcomeLocation}
-              onSearch={() => {
-                setLocationOnboardingError(null);
-                setIsLocationOnboardingOpen(false);
-                setCanRenderMap(true);
-                setIsSearchOpen(true);
-              }}
+              onSearch={openDiscover}
             />
           ) : null}
+        </>
+      ) : null}
+
+      {isDiscoverOpen ? (
+        <>
+          <DiscoverView
+            isOpen={isDiscoverOpen}
+            locations={locations}
+            isLoading={isDiscoverLoading}
+            telegramInitData={telegramInitData}
+            onSelectLocation={handleOpenLocationDetail}
+            onOpenMap={leaveDiscoverForMap}
+          />
+          <LocationDetailSheet
+            isOpen={isDetailOpen && Boolean(selectedLocation)}
+            location={selectedLocation}
+            photos={selectedLocationPhotos}
+            reviews={selectedLocationReviews}
+            photosLoading={isSelectedLocationPhotosLoading}
+            reviewsLoading={isSelectedLocationReviewsLoading}
+            canContribute={Boolean(telegramUser && userProfile)}
+            variant="page"
+            onClose={handleCloseLocationDetail}
+            onShowOnMap={handleShowSelectedOnMap}
+            onCreateReview={handleCreateLocationReview}
+            onCreateReport={handleCreateLocationReport}
+          />
         </>
       ) : null}
 
@@ -831,7 +915,7 @@ export function HomePage() {
             onSubmit={handleCreateLocation}
           />
         </>
-      ) : canRenderMap ? (
+      ) : canRenderMap && !isDiscoverOpen ? (
         <div className="error-toast" role="status">
           <Map size={18} />
           <span>

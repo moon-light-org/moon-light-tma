@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Search, MapPin } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { Location } from "../../../entities/location/model/types";
-import { fetchLocations } from "../../../entities/location/api/locationApi";
+import { useLocationSearch } from "../model/useLocationSearch";
 
 type SearchSheetProps = {
   isOpen: boolean;
@@ -12,15 +12,6 @@ type SearchSheetProps = {
   onSelectLocation: (location: Location) => void;
 };
 
-function normalizeSearchText(value: string | null | undefined): string {
-  return (value ?? "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
 export function SearchSheet({
   isOpen,
   locations,
@@ -29,9 +20,11 @@ export function SearchSheet({
   onSelectLocation,
 }: SearchSheetProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [query, setQuery] = useState("");
-  const [remoteResults, setRemoteResults] = useState<Location[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const { query, setQuery, results, isSearching, clearSearch } = useLocationSearch({
+    isActive: isOpen,
+    locations,
+    telegramInitData,
+  });
   const [viewportFrame, setViewportFrame] = useState<{ height: number; offsetTop: number } | null>(null);
 
   useEffect(() => {
@@ -58,80 +51,12 @@ export function SearchSheet({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const q = query.trim();
-    if (q.length === 0) {
-      setRemoteResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    let isActive = true;
-    setIsSearching(true);
-
-    const timer = window.setTimeout(async () => {
-      try {
-        const matches = await fetchLocations(telegramInitData, { q, limit: 100 });
-        if (isActive) {
-          setRemoteResults(matches);
-        }
-      } catch {
-        if (isActive) {
-          setRemoteResults([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsSearching(false);
-        }
-      }
-    }, 220);
-
-    return () => {
-      isActive = false;
-      window.clearTimeout(timer);
-    };
-  }, [isOpen, query, telegramInitData]);
-
-  const results = useMemo(() => {
-    const q = normalizeSearchText(query);
-    if (!q) return locations;
-    const merged = new Map<number, Location>();
-    for (const location of remoteResults) {
-      merged.set(location.id, location);
-    }
-    for (const location of locations) {
-      const searchable = normalizeSearchText([
-        location.name,
-        location.description,
-        location.category,
-        location.main_category,
-        location.address,
-        location.phone,
-        location.website_url,
-      ].filter(Boolean).join(" "));
-      if (searchable.includes(q)) {
-        merged.set(location.id, location);
-      }
-    }
-    return [...merged.values()];
-  }, [query, locations, remoteResults]);
-
   if (!isOpen) return null;
 
   const handleSelect = (location: Location) => {
     inputRef.current?.blur();
     onSelectLocation(location);
     onClose();
-  };
-
-  const clearSearch = () => {
-    setQuery("");
-    setRemoteResults([]);
-    setIsSearching(false);
   };
 
   return (

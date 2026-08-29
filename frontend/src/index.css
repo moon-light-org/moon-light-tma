@@ -1758,6 +1758,228 @@ code {
   flex-shrink: 0;
 }
 
+/* ─── Discover (list-first browsing) ────────────────────────── */
+.discover-view {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: var(--c-bg);
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.discover-view__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 12px;
+  flex-shrink: 0;
+}
+
+.discover-view__titles h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.discover-view__titles p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--c-text2);
+}
+
+.discover-view__map-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.discover-view__input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 8px;
+  padding: 10px 14px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface2);
+  flex-shrink: 0;
+}
+
+.discover-view__search-icon {
+  color: var(--c-text2);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.discover-view__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--c-text);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.discover-view__input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.discover-view__clear {
+  display: flex;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--c-text2);
+  cursor: pointer;
+}
+
+.discover-view__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+.discover-view__list::-webkit-scrollbar {
+  display: none;
+}
+
+.discover-view__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--c-text2);
+  font-size: 14px;
+}
+
+.discover-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--c-border);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background var(--transition);
+}
+
+.discover-row:active {
+  background: var(--c-surface2);
+}
+
+.discover-row__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--c-surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--c-accent);
+}
+
+.discover-row__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.discover-row__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discover-row__meta {
+  font-size: 12px;
+  color: var(--c-text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discover-row__chevron {
+  color: var(--c-text2);
+  flex-shrink: 0;
+}
+
+/* ─── Location detail as a full page (discover flow) ────────── */
+.location-detail-page {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  background: var(--c-bg);
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.location-detail-sheet--page {
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  animation: fadeIn 0.16s ease;
+}
+
+.location-detail-location-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.location-detail-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 20px;
+  padding: 7px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--c-accent);
+  background: var(--c-surface);
+  color: var(--c-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.location-detail-map-link:active {
+  background: var(--c-surface2);
+}
+
 /* ─── Hide maplibre default controls ────────────────────────── */
 .maplibregl-ctrl-bottom-left,
 .maplibregl-ctrl-bottom-right,
