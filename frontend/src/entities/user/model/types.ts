@@ -4,6 +4,7 @@ export type UserProfile = {
   nickname: string;
   avatar_url: string | null;
   role: string;
+  has_pending_location?: boolean;
   created_at: string;
 };
 

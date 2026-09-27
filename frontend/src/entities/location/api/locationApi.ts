@@ -35,16 +35,19 @@ const mainCategories = new Set<LocationMainCategory>([
 ]);
 
 function normalizeMainCategory(value: unknown, category: unknown): LocationMainCategory {
-  if (typeof value === "string" && mainCategories.has(value as LocationMainCategory)) {
+  const legacy = typeof category === "string" ? category.toLowerCase() : "";
+  // Correct old imports that were stored as "other" before main categories existed.
+  if (value !== "other" && typeof value === "string" && mainCategories.has(value as LocationMainCategory)) {
     return value as LocationMainCategory;
   }
-  const legacy = typeof category === "string" ? category.toLowerCase() : "";
   if (/(hotel|hostel|lodging|camp|accommodation)/.test(legacy)) return "accommodation";
   if (/(bitcoin|atm|exchange)/.test(legacy)) return "bitcoin";
   if (/(food|restaurant|bar|cafe|bakery)/.test(legacy)) return "food_drink";
   if (/(shop|store|grocery|market|retail)/.test(legacy)) return "retail";
   if (/(service|repair|professional)/.test(legacy)) return "services";
-  return "other";
+  return typeof value === "string" && mainCategories.has(value as LocationMainCategory)
+    ? value as LocationMainCategory
+    : "other";
 }
 
 function normalizeLocation(raw: ApiLocation): Location | null {

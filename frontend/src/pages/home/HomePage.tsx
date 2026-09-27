@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Map, MapPin } from "lucide-react";
+import { AlertCircle, CheckCircle2, Map, MapPin } from "lucide-react";
 import type { MapRef } from "react-map-gl/maplibre";
 import {
   fetchLocations,
@@ -84,7 +84,7 @@ function getGeolocationErrorCode(error: unknown): number | null {
 function getGeolocationErrorMessage(error: unknown): string {
   const code = getGeolocationErrorCode(error);
   if (code === GEOLOCATION_PERMISSION_DENIED) {
-    return "Location permission is blocked. Enable it for Telegram or use search instead.";
+    return "Location permission is blocked. Enable it in Telegram Desktop or your browser settings, or use search instead.";
   }
   if (code === GEOLOCATION_POSITION_UNAVAILABLE) {
     return "Your current location is unavailable right now. Try again or use search.";
@@ -112,7 +112,9 @@ export function HomePage() {
   const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation,        setUserLocation]        = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<LocationMainCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<LocationMainCategory | null>(null);
+  const [hasPendingSubmission, setHasPendingSubmission] = useState(false);
+  const [submissionConfirmation, setSubmissionConfirmation] = useState<string | null>(null);
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
@@ -192,6 +194,7 @@ export function HomePage() {
         if (!isActive) return;
         if (user) {
           setUserProfile(user);
+          setHasPendingSubmission(Boolean(user.has_pending_location));
           writeCachedProfile(user);
           setCanRenderMap(true);
         } else if (cachedProfile && !user) {
@@ -343,27 +346,28 @@ export function HomePage() {
   const handleCreateLocation = async (payload: CreateLocationPayload) => {
     setIsSubmitting(true);
     try {
-      await createLocation(payload, telegramInitData);
+      const created = await createLocation(payload, telegramInitData);
       const reloaded = await fetchLocations(telegramInitData);
       setLocations(reloaded);
       setError(null);
       setSelectedLocation(null);
+      if (!created.is_approved) {
+        setHasPendingSubmission(true);
+        setSubmissionConfirmation("Location application registered. It must be confirmed before you can add another location.");
+      } else {
+        setSubmissionConfirmation("Location registered successfully.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleToggleCategory = (category: LocationMainCategory | "all") => {
-    if (category === "all") { setSelectedCategories([]); return; }
-    setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-    );
-  };
+  const handleSelectCategory = (category: LocationMainCategory | null) => setSelectedCategory(category);
 
   const categoryFilteredLocations =
-    selectedCategories.length === 0
+    selectedCategory === null
       ? locations
-      : locations.filter((l) => selectedCategories.includes(l.main_category));
+      : locations.filter((l) => l.main_category === selectedCategory);
   const visibleLocations =
     selectedLocation && !categoryFilteredLocations.some((location) => location.id === selectedLocation.id)
       ? [selectedLocation, ...categoryFilteredLocations]
@@ -404,6 +408,12 @@ export function HomePage() {
       window.clearTimeout(timer);
     };
   }, [lastFetchedBoundsKey, telegramInitData, viewportBounds]);
+
+  useEffect(() => {
+    if (!submissionConfirmation) return;
+    const timeoutId = window.setTimeout(() => setSubmissionConfirmation(null), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [submissionConfirmation]);
 
   // The discover list has no map, so it cannot rely on viewport-driven fetching.
   useEffect(() => {
@@ -577,6 +587,7 @@ export function HomePage() {
       const freshProfile = await getCurrentUser(telegramInitData);
       if (freshProfile) {
         setUserProfile(freshProfile);
+        setHasPendingSubmission(Boolean(freshProfile.has_pending_location));
         writeCachedProfile(freshProfile);
       }
     } catch (err) {
@@ -585,6 +596,9 @@ export function HomePage() {
   };
 
   const handleAddLocationFromProfile = () => {
+    if (hasPendingSubmission) {
+      return;
+    }
     setIsProfileOpen(false);
     setPickedCoordinates(null);
     setIsTapSheetOpen(false);
@@ -732,6 +746,7 @@ export function HomePage() {
           <LocationMap
             locations={visibleLocations}
             selectedLocationId={selectedLocation?.id ?? null}
+            pickedCoordinates={pickedCoordinates}
             isPickingLocation={isAwaitingMapPickForNewLocation}
             onMapPickLocation={handlePickLocation}
             onLocationSelect={handleOpenLocationDetail}
@@ -744,8 +759,8 @@ export function HomePage() {
 
           {/* Overlaid header: search + filter chips */}
           <HomeHeader
-            selectedCategories={selectedCategories}
-            onToggleCategory={handleToggleCategory}
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleSelectCategory}
             onSearchClick={() => setIsSearchOpen(true)}
             profileInitial={profileInitial}
             onProfileClick={() => {
@@ -839,6 +854,13 @@ export function HomePage() {
         </div>
       )}
 
+      {submissionConfirmation ? (
+        <div className="success-toast" role="status">
+          <CheckCircle2 size={18} />
+          <span>{submissionConfirmation}</span>
+        </div>
+      ) : null}
+
       {canRenderMap && isAwaitingMapPickForNewLocation ? (
         <div className="error-toast error-toast--info" role="status">
           <MapPin size={18} />
@@ -853,6 +875,7 @@ export function HomePage() {
           telegramUser={telegramUser}
           userProfile={userProfile}
           placesAddedCount={placesAddedCount}
+          hasPendingSubmission={hasPendingSubmission}
           isSavingProfile={isProfileSaving}
           profileError={profileError}
           onSaveProfile={submitProfile}

@@ -7,6 +7,7 @@ import type { Location } from "../../entities/location/model/types";
 type MapProps = {
   locations: Location[];
   selectedLocationId: number | null;
+  pickedCoordinates?: { latitude: number; longitude: number } | null;
   isPickingLocation: boolean;
   onMapPickLocation: (lat: number, lng: number) => void;
   onLocationSelect: (location: Location | null) => void;
@@ -59,6 +60,7 @@ function toGeoJson(locations: Location[], selectedLocationId: number | null): Fe
 export function LocationMap({
   locations,
   selectedLocationId,
+  pickedCoordinates = null,
   isPickingLocation,
   onMapPickLocation,
   onLocationSelect,
@@ -240,6 +242,11 @@ export function LocationMap({
           </Marker>
         );
       })}
+      {pickedCoordinates ? (
+        <Marker latitude={pickedCoordinates.latitude} longitude={pickedCoordinates.longitude} anchor="bottom">
+          <span className="map-picked-marker" aria-label="Selected location" role="img" />
+        </Marker>
+      ) : null}
       <Source id={USER_LOCATION_SOURCE_ID} type="geojson" data={userLocationGeoJson}>
         <Layer
           id={USER_LOCATION_ACCURACY_LAYER_ID}

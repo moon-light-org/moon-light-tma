@@ -239,6 +239,39 @@ button {
   transform: scale(0.96);
 }
 
+.filter-select {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: auto;
+}
+
+.filter-select select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.filter-select.is-active {
+  background: var(--c-accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.35);
+}
+
+.filter-select.is-active svg { color: rgba(255, 255, 255, 0.9); }
+
 /* ─── Map Action Buttons ─────────────────────────────────────── */
 .map-actions {
   position: absolute;
@@ -356,6 +389,26 @@ button {
   line-height: 1;
 }
 
+.map-picked-marker {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: var(--c-accent);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.35);
+  transform: rotate(-45deg);
+}
+
+.map-picked-marker::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 /* ─── Error Toast ────────────────────────────────────────────── */
 .error-toast {
   position: absolute;
@@ -384,6 +437,24 @@ button {
 
 .error-toast--info {
   background: rgba(15, 23, 42, 0.92);
+}
+
+.success-toast {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  left: 12px;
+  right: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #157347;
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 @keyframes slideUp {
@@ -1703,6 +1774,11 @@ code {
 
 .profile-sheet__action:active {
   transform: scale(0.99);
+}
+
+.profile-sheet__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .profile-sheet__action-icon {

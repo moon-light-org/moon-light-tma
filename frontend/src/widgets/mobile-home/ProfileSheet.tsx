@@ -8,6 +8,7 @@ type ProfileSheetProps = {
   telegramUser: TelegramUser | null;
   userProfile: UserProfile | null;
   placesAddedCount: number;
+  hasPendingSubmission: boolean;
   isSavingProfile: boolean;
   profileError: string | null;
   onSaveProfile: (nickname: string) => Promise<void>;
@@ -21,6 +22,7 @@ export function ProfileSheet({
   telegramUser,
   userProfile,
   placesAddedCount,
+  hasPendingSubmission,
   isSavingProfile,
   profileError,
   onSaveProfile,
@@ -105,13 +107,13 @@ export function ProfileSheet({
           </div>
 
           <div className="profile-sheet__actions">
-            <button type="button" className="profile-sheet__action" onClick={onAddLocationClick}>
+            <button type="button" className="profile-sheet__action" onClick={onAddLocationClick} disabled={hasPendingSubmission}>
               <span className="profile-sheet__action-icon" aria-hidden="true">
                 <Plus size={16} />
               </span>
               <span className="profile-sheet__action-copy">
-                <strong>Add location</strong>
-                <span>Select a point on the map to start</span>
+                <strong>{hasPendingSubmission ? "Location pending confirmation" : "Add location"}</strong>
+                <span>{hasPendingSubmission ? "You can add another after this location is confirmed" : "Select a point on the map to start"}</span>
               </span>
             </button>
           </div>
