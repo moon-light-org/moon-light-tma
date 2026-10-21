@@ -42,7 +42,6 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
-import { LocationOnboardingPrompt } from "../../widgets/mobile-home/LocationOnboardingPrompt";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
@@ -122,9 +121,6 @@ export function HomePage() {
   const [isDiscoverLoading,  setIsDiscoverLoading]  = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
-  const [isLocationOnboardingOpen, setIsLocationOnboardingOpen] = useState(true);
-  const [isLocatingFromOnboarding, setIsLocatingFromOnboarding] = useState(false);
-  const [locationOnboardingError, setLocationOnboardingError] = useState<string | null>(null);
   const [isLoading,          setIsLoading]          = useState(true);
   const [canRenderMap,       setCanRenderMap]       = useState(false);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
@@ -157,6 +153,7 @@ export function HomePage() {
   } | null>(null);
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
   const mapInstanceRef = useRef<MapRef | null>(null);
+  const hasRequestedInitialLocation = useRef(false);
   const handleMapReady = useCallback((map: MapRef | null) => {
     mapInstanceRef.current = map;
   }, []);
@@ -238,29 +235,15 @@ export function HomePage() {
 
   const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
 
-  const requestUserLocation = ({
-    onFailure,
-    onSuccess,
-    silent = false,
-  }: {
-    onFailure?: (message: string) => void;
-    onSuccess?: () => void;
-    silent?: boolean;
-  } = {}) => {
+  const requestUserLocation = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       const message = "Geolocation is not available on this device.";
-      if (!silent) {
-        setError(message);
-      }
-      onFailure?.(message);
+      setError(message);
       return;
     }
 
     const fail = (message: string) => {
-      if (!silent) {
-        setError(message);
-      }
-      onFailure?.(message);
+      setError(message);
     };
 
     void (async () => {
@@ -285,9 +268,15 @@ export function HomePage() {
       setUserLocation(coords);
       setFocusCoordinates(coords);
       setError(null);
-      onSuccess?.();
     })();
-  };
+  }, []);
+
+  useEffect(() => {
+    // StrictMode replays effects in development; request location only once.
+    if (hasRequestedInitialLocation.current) return;
+    hasRequestedInitialLocation.current = true;
+    requestUserLocation();
+  }, [requestUserLocation]);
 
   const submitOnboardingNickname = async (nickname: string) => {
     if (!telegramUser) {
@@ -491,10 +480,6 @@ export function HomePage() {
     await createLocationReport(selectedLocation.id, payload, telegramInitData);
   };
 
-  const finishLocationOnboarding = () => {
-    setCanRenderMap(true);
-  };
-
   const handleLocateMe = () => {
     requestUserLocation();
   };
@@ -505,13 +490,6 @@ export function HomePage() {
 
   const handleZoomOut = () => {
     mapInstanceRef.current?.zoomOut({ duration: 220 });
-  };
-
-  const openDiscover = () => {
-    setLocationOnboardingError(null);
-    setIsLocationOnboardingOpen(false);
-    setIsSearchOpen(false);
-    setIsDiscoverOpen(true);
   };
 
   const leaveDiscoverForMap = () => {
@@ -535,23 +513,6 @@ export function HomePage() {
   const handleCloseLocationDetail = () => {
     setIsDetailOpen(false);
     setSelectedLocation(null);
-  };
-
-  const handleWelcomeLocation = () => {
-    setIsLocatingFromOnboarding(true);
-    setLocationOnboardingError(null);
-    requestUserLocation({
-      silent: true,
-      onFailure: (message) => {
-        setIsLocatingFromOnboarding(false);
-        setLocationOnboardingError(message);
-      },
-      onSuccess: () => {
-        setIsLocatingFromOnboarding(false);
-        setLocationOnboardingError(null);
-        setIsLocationOnboardingOpen(false);
-      },
-    });
   };
 
   const submitProfile = async (nickname: string) => {
@@ -808,14 +769,6 @@ export function HomePage() {
             }}
           />
 
-          {isLocationOnboardingOpen && !isOnboardingOpen ? (
-            <LocationOnboardingPrompt
-              isLocating={isLocatingFromOnboarding}
-              error={locationOnboardingError}
-              onShareLocation={handleWelcomeLocation}
-              onSearch={openDiscover}
-            />
-          ) : null}
         </>
       ) : null}
 
@@ -971,7 +924,7 @@ export function HomePage() {
           onSkip={skipOnboarding}
           onComplete={() => {
             setIsOnboardingOpen(false);
-            finishLocationOnboarding();
+            setCanRenderMap(true);
           }}
         />
       )}
