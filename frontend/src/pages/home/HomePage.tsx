@@ -154,6 +154,7 @@ export function HomePage() {
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
   const mapInstanceRef = useRef<MapRef | null>(null);
   const hasRequestedInitialLocation = useRef(false);
+  const isLocationRequestPending = useRef(false);
   const handleMapReady = useCallback((map: MapRef | null) => {
     mapInstanceRef.current = map;
   }, []);
@@ -236,6 +237,7 @@ export function HomePage() {
   const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
 
   const requestUserLocation = useCallback(() => {
+    if (isLocationRequestPending.current) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       const message = "Geolocation is not available on this device.";
       setError(message);
@@ -246,6 +248,7 @@ export function HomePage() {
       setError(message);
     };
 
+    isLocationRequestPending.current = true;
     void (async () => {
       let position: GeolocationPosition;
       try {
@@ -268,7 +271,9 @@ export function HomePage() {
       setUserLocation(coords);
       setFocusCoordinates(coords);
       setError(null);
-    })();
+    })().finally(() => {
+      isLocationRequestPending.current = false;
+    });
   }, []);
 
   useEffect(() => {
@@ -481,6 +486,11 @@ export function HomePage() {
   };
 
   const handleLocateMe = () => {
+    if (userLocation) {
+      // A new object also recenters after panning away from the same position.
+      setFocusCoordinates({ ...userLocation });
+      return;
+    }
     requestUserLocation();
   };
 
