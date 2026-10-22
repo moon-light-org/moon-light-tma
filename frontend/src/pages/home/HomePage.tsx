@@ -39,6 +39,7 @@ import { DiscoverView } from "../../features/discover/ui/DiscoverView";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
 import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
+import { canRequestLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../../shared/telegram/location";
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
@@ -61,39 +62,6 @@ const DEV_STUB_PROFILE: UserProfile = {
   role: DEV_FALLBACK_ROLE,
   created_at: new Date().toISOString(),
 };
-
-const GEOLOCATION_PERMISSION_DENIED = 1;
-const GEOLOCATION_POSITION_UNAVAILABLE = 2;
-const GEOLOCATION_TIMEOUT = 3;
-
-function getCurrentBrowserPosition(options: PositionOptions): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
-  });
-}
-
-function getGeolocationErrorCode(error: unknown): number | null {
-  if (!error || typeof error !== "object" || !("code" in error)) {
-    return null;
-  }
-  const code = Number((error as { code?: unknown }).code);
-  return Number.isFinite(code) ? code : null;
-}
-
-function getGeolocationErrorMessage(error: unknown): string {
-  const code = getGeolocationErrorCode(error);
-  if (code === GEOLOCATION_PERMISSION_DENIED) {
-    return "Location permission is blocked. Enable it in Telegram Desktop or your browser settings, or use search instead.";
-  }
-  if (code === GEOLOCATION_POSITION_UNAVAILABLE) {
-    return "Your current location is unavailable right now. Try again or use search.";
-  }
-  if (code === GEOLOCATION_TIMEOUT) {
-    return "Location is taking too long. Try again or use search.";
-  }
-  return "Could not get your current location. Try again or use search.";
-}
-
 
 export function HomePage() {
   const telegramUser     = useTelegramUser();
@@ -238,40 +206,14 @@ export function HomePage() {
 
   const requestUserLocation = useCallback(() => {
     if (isLocationRequestPending.current) return;
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      const message = "Geolocation is not available on this device.";
-      setError(message);
-      return;
-    }
-
-    const fail = (message: string) => {
-      setError(message);
-    };
-
     isLocationRequestPending.current = true;
-    void (async () => {
-      let position: GeolocationPosition;
-      try {
-        position = await getCurrentBrowserPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
-      } catch (initialError) {
-        if (getGeolocationErrorCode(initialError) === GEOLOCATION_PERMISSION_DENIED) {
-          fail(getGeolocationErrorMessage(initialError));
-          return;
-        }
-
-        try {
-          position = await getCurrentBrowserPosition({ enableHighAccuracy: false, timeout: 14000, maximumAge: 300000 });
-        } catch (fallbackError) {
-          fail(getGeolocationErrorMessage(fallbackError));
-          return;
-        }
-      }
-
-      const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+    void getCurrentLocation().then((coords) => {
       setUserLocation(coords);
       setFocusCoordinates(coords);
       setError(null);
-    })().finally(() => {
+    }).catch((error: unknown) => {
+      setError(error instanceof Error ? error.message : "Could not get your current location. Try again or use search.");
+    }).finally(() => {
       isLocationRequestPending.current = false;
     });
   }, []);
@@ -486,6 +428,7 @@ export function HomePage() {
   };
 
   const handleLocateMe = () => {
+    if (openLocationSettingsIfDenied()) return;
     if (userLocation) {
       // A new object also recenters after panning away from the same position.
       setFocusCoordinates({ ...userLocation });
@@ -745,7 +688,7 @@ export function HomePage() {
 
           {/* Floating action buttons */}
           <HomeControls
-            canLocate={typeof window !== "undefined" && Boolean(window.navigator?.geolocation)}
+            canLocate={canRequestLocation()}
             onLocateMe={handleLocateMe}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
