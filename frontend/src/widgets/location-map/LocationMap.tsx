@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import Map, { Layer, Marker, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { FeatureCollection, Point } from "geojson";
 import { MAIN_CATEGORY_BY_VALUE } from "../../entities/location/model/mainCategories";
@@ -21,6 +21,7 @@ type MapProps = {
   focusCoordinates?: { latitude: number; longitude: number } | null;
   userLocation?: { latitude: number; longitude: number } | null;
   onMapReady?: (map: MapRef | null) => void;
+  onMapLoaded?: () => void;
 };
 
 const SOURCE_ID = "saved-locations";
@@ -29,7 +30,7 @@ const CLUSTER_COUNT_LAYER_ID = "cluster-count";
 const USER_LOCATION_SOURCE_ID = "user-location";
 const USER_LOCATION_ACCURACY_LAYER_ID = "user-location-accuracy";
 const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
-const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
+const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 function toGeoJson(locations: Location[], selectedLocationId: number | null): FeatureCollection<Point> {
   return {
@@ -69,11 +70,13 @@ export function LocationMap({
   focusCoordinates = null,
   userLocation = null,
   onMapReady,
+  onMapLoaded,
 }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
 
-  useEffect(() => {
-    return () => onMapReady?.(null);
+  const registerMap = useCallback((map: MapRef | null) => {
+    mapRef.current = map;
+    onMapReady?.(map);
   }, [onMapReady]);
   const geoJson = useMemo(() => toGeoJson(locations, selectedLocationId), [locations, selectedLocationId]);
   const markerLocations = useMemo(
@@ -162,12 +165,12 @@ export function LocationMap({
 
   const handleMapLoad = () => {
     emitViewportBounds();
-    onMapReady?.(mapRef.current);
+    onMapLoaded?.();
   };
 
   return (
     <Map
-      ref={mapRef}
+      ref={registerMap}
       initialViewState={{
         latitude: initialCenter?.latitude ?? 20,
         longitude: initialCenter?.longitude ?? 0,
@@ -193,7 +196,7 @@ export function LocationMap({
           type="circle"
           filter={["has", "point_count"]}
           paint={{
-            "circle-color": "#f29900",
+            "circle-color": "#182337",
             "circle-radius": ["step", ["get", "point_count"], 18, 20, 22, 50, 26],
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 3,
@@ -237,7 +240,8 @@ export function LocationMap({
               <span className="map-location-marker__spot">
                 <Icon size={18} strokeWidth={2.4} />
               </span>
-              {location.is_approved ? <span className="map-location-marker__badge" aria-hidden="true">L</span> : null}
+              <span className="map-location-marker__label">{location.name}</span>
+              {location.accepts_lightning ? <span className="map-location-marker__badge" aria-hidden="true">ϟ</span> : null}
             </button>
           </Marker>
         );
@@ -252,9 +256,9 @@ export function LocationMap({
           id={USER_LOCATION_ACCURACY_LAYER_ID}
           type="circle"
           paint={{
-            "circle-color": "rgba(26, 115, 232, 0.18)",
+            "circle-color": "rgba(24, 35, 55, 0.09)",
             "circle-radius": 18,
-            "circle-stroke-color": "rgba(26, 115, 232, 0.28)",
+            "circle-stroke-color": "rgba(24, 35, 55, 0.2)",
             "circle-stroke-width": 1,
           }}
         />
@@ -262,7 +266,7 @@ export function LocationMap({
           id={USER_LOCATION_POINT_LAYER_ID}
           type="circle"
           paint={{
-            "circle-color": "#1a73e8",
+            "circle-color": "#182337",
             "circle-radius": 7,
             "circle-stroke-color": "#ffffff",
             "circle-stroke-width": 3,

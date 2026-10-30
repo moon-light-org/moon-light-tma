@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, Map, MapPin } from "lucide-react";
+import { AlertCircle, CheckCircle2, MapPin, X } from "lucide-react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import type { MapRef } from "react-map-gl/maplibre";
 import {
   fetchLocations,
@@ -42,7 +43,7 @@ import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useT
 import { canRequestLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../../shared/telegram/location";
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
-import { HomeHeader } from "../../widgets/mobile-home/HomeHeader";
+import { BottomNavigation, ExploreToolbar, MapLoader, PlacePreview } from "../../widgets/mobile-home/AppShell";
 import { OnboardingFlow } from "../../widgets/mobile-home/OnboardingFlow";
 import { ProfileSheet } from "../../widgets/mobile-home/ProfileSheet";
 import { AdminSheet } from "../../widgets/mobile-home/AdminSheet";
@@ -80,6 +81,8 @@ export function HomePage() {
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation,        setUserLocation]        = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LocationMainCategory | null>(null);
+  const [lightningOnly, setLightningOnly] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
   const [hasPendingSubmission, setHasPendingSubmission] = useState(false);
   const [submissionConfirmation, setSubmissionConfirmation] = useState<string | null>(null);
   const [isTapSheetOpen,     setIsTapSheetOpen]     = useState(false);
@@ -298,12 +301,23 @@ export function HomePage() {
     }
   };
 
-  const handleSelectCategory = (category: LocationMainCategory | null) => setSelectedCategory(category);
+  const handleSelectCategory = (category: LocationMainCategory | null) => {
+    setSelectedCategory(category);
+    setSelectedLocation(null);
+    setIsDetailOpen(false);
+  };
 
+  const handleToggleLightning = () => {
+    setLightningOnly((value) => !value);
+    setSelectedLocation(null);
+    setIsDetailOpen(false);
+  };
+
+  const locationsByPayment = lightningOnly ? locations.filter((location) => location.accepts_lightning) : locations;
   const categoryFilteredLocations =
     selectedCategory === null
-      ? locations
-      : locations.filter((l) => l.main_category === selectedCategory);
+      ? locationsByPayment
+      : locationsByPayment.filter((l) => l.main_category === selectedCategory);
   const visibleLocations =
     selectedLocation && !categoryFilteredLocations.some((location) => location.id === selectedLocation.id)
       ? [selectedLocation, ...categoryFilteredLocations]
@@ -643,48 +657,31 @@ export function HomePage() {
 
   /* ── Loading ────────────────────────────────────────── */
   if (isLoading) {
-    return (
-      <main className="center-screen">
-        <div className="spinner" />
-        <p>Loading map…</p>
-      </main>
-    );
+    return <MapLoader fullScreen />;
   }
 
   /* ── Main UI ─────────────────────────────────────────── */
   return (
-    <main className="map-shell">
+    <MotionConfig reducedMotion="user"><main className="map-shell app-shell">
       {canRenderMap && !isDiscoverOpen ? (
         <>
-          {/* Full-screen map */}
+          <ExploreToolbar category={selectedCategory} onCategory={handleSelectCategory} lightningOnly={lightningOnly} onLightning={handleToggleLightning} lightningCount={locations.filter((location) => location.accepts_lightning).length} onSearch={() => setIsSearchOpen(true)} isAdmin={isAdminUser} onAdmin={() => void openAdminPanel()} />
+          <motion.section className={`explore-map${selectedLocation ? " has-selection" : ""}`} aria-label="Explore map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .45 }}>
           <LocationMap
             locations={visibleLocations}
             selectedLocationId={selectedLocation?.id ?? null}
             pickedCoordinates={pickedCoordinates}
             isPickingLocation={isAwaitingMapPickForNewLocation}
             onMapPickLocation={handlePickLocation}
-            onLocationSelect={handleOpenLocationDetail}
+            onLocationSelect={(location) => { setSelectedLocation(location); setIsDetailOpen(false); }}
             onViewportChange={setViewportBounds}
             initialCenter={userLocation ?? focusCoordinates ?? undefined}
             focusCoordinates={focusCoordinates}
             userLocation={userLocation}
             onMapReady={handleMapReady}
+            onMapLoaded={() => setIsMapReady(true)}
           />
 
-          {/* Overlaid header: search + filter chips */}
-          <HomeHeader
-            selectedCategory={selectedCategory}
-            onSelectCategory={handleSelectCategory}
-            onSearchClick={() => setIsSearchOpen(true)}
-            profileInitial={profileInitial}
-            onProfileClick={() => {
-              void openProfile();
-            }}
-            isAdmin={isAdminUser}
-            onAdminClick={() => {
-              void openAdminPanel();
-            }}
-          />
 
           {/* Floating action buttons */}
           <HomeControls
@@ -693,6 +690,9 @@ export function HomePage() {
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
           />
+          <AnimatePresence>{!isMapReady && <MapLoader key="map-loader" />}</AnimatePresence>
+          <AnimatePresence mode="wait">{selectedLocation && !isDetailOpen ? <PlacePreview key={selectedLocation.id} location={selectedLocation} onDetails={() => setIsDetailOpen(true)} onClose={handleCloseLocationDetail} /> : null}</AnimatePresence>
+          </motion.section>
 
           <LocationDetailSheet
             isOpen={isDetailOpen && Boolean(selectedLocation)}
@@ -734,6 +734,10 @@ export function HomePage() {
             telegramInitData={telegramInitData}
             onSelectLocation={handleOpenLocationDetail}
             onOpenMap={leaveDiscoverForMap}
+            category={selectedCategory}
+            onCategory={handleSelectCategory}
+            lightningOnly={lightningOnly}
+            onLightning={handleToggleLightning}
           />
           <LocationDetailSheet
             isOpen={isDetailOpen && Boolean(selectedLocation)}
@@ -757,6 +761,7 @@ export function HomePage() {
         <div className="error-toast" role="alert">
           <AlertCircle size={18} />
           <span>{error}</span>
+          <button className="toast-dismiss" onClick={() => setError(null)} aria-label="Dismiss message"><X size={15} /></button>
         </div>
       )}
 
@@ -860,14 +865,9 @@ export function HomePage() {
             onSubmit={handleCreateLocation}
           />
         </>
-      ) : canRenderMap && !isDiscoverOpen ? (
-        <div className="error-toast" role="status">
-          <Map size={18} />
-          <span>
-            Viewing existing locations only. Open in Telegram to add new ones.
-          </span>
-        </div>
       ) : null}
+
+      <BottomNavigation active={isProfileOpen ? "profile" : isDiscoverOpen ? "explore" : "map"} onMap={leaveDiscoverForMap} onExplore={() => { setIsDiscoverOpen(true); setIsDetailOpen(false); }} onProfile={() => void openProfile()} onAdd={() => { if (!telegramUser || !userProfile) { setError("Open MoonLight in Telegram to add a place."); return; } leaveDiscoverForMap(); handleAddLocationFromProfile(); }} />
 
       {isOnboardingOpen && telegramUser && (
         <OnboardingFlow
@@ -881,6 +881,6 @@ export function HomePage() {
           }}
         />
       )}
-    </main>
+    </main></MotionConfig>
   );
 }
