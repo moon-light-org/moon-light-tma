@@ -1,3 +1,5 @@
+import { loadTelegramWebApp } from "./webAppSdk.js";
+
 export type Coordinates = { latitude: number; longitude: number };
 
 type LocationManager = {
@@ -64,6 +66,11 @@ function browserErrorMessage(error: unknown): string {
 }
 
 export async function getCurrentLocation(): Promise<Coordinates> {
+  const sdkLoaded = typeof document === "undefined" ? true : await loadTelegramWebApp();
+  // Avoid a second permission path if the native bridge hasn't arrived yet.
+  if (!sdkLoaded && /tgWebAppData=/.test(window.location.hash + window.location.search)) {
+    throw new Error("Telegram location is still starting. Try the location button again or use search.");
+  }
   const manager = getLocationManager();
   if (manager) {
     if (!manager.isInited) {

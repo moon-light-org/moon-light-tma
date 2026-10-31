@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "test:location": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --outDir .tmp-tests src/shared/telegram/location.ts && node tests/location.spec.mjs",
     "test": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --outDir .tmp-tests src/entities/user/model/profileDefaults.ts src/entities/user/model/locationOnboardingStorage.ts && node tests/profileDefaults.spec.mjs && node tests/locationOnboardingStorage.spec.mjs && node tests/uiSource.spec.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:startup": "tsc --module ESNext --target ES2022 --moduleResolution bundler --strict --skipLibCheck --types vite/client --outDir .tmp-tests src/shared/api/http.ts src/shared/telegram/webAppSdk.ts && node tests/startup.spec.mjs"
   },
   "dependencies": {
     "@telegram-apps/sdk-react": "^3.3.9",

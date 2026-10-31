@@ -92,8 +92,7 @@ export function HomePage() {
   const [isDiscoverLoading,  setIsDiscoverLoading]  = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
-  const [isLoading,          setIsLoading]          = useState(true);
-  const [canRenderMap,       setCanRenderMap]       = useState(false);
+  const [canRenderMap,       setCanRenderMap]       = useState(true);
   const [isSubmitting,       setIsSubmitting]       = useState(false);
   const [isOnboardingSubmitting, setIsOnboardingSubmitting] = useState(false);
   const [isOnboardingOpen,   setIsOnboardingOpen]   = useState(false);
@@ -126,6 +125,14 @@ export function HomePage() {
   const mapInstanceRef = useRef<MapRef | null>(null);
   const hasRequestedInitialLocation = useRef(false);
   const isLocationRequestPending = useRef(false);
+  useEffect(() => {
+    if (isMapReady) return;
+    const timeout = window.setTimeout(() => {
+      setIsMapReady(true);
+      setError("Map loading is taking longer than expected. You can use Explore to find places.");
+    }, 10000);
+    return () => window.clearTimeout(timeout);
+  }, [isMapReady]);
   const handleMapReady = useCallback((map: MapRef | null) => {
     mapInstanceRef.current = map;
   }, []);
@@ -136,7 +143,6 @@ export function HomePage() {
       if (telegramUserId === null) {
         if (isActive) {
           setCanRenderMap(true);
-          setIsLoading(false);
         }
         return;
       }
@@ -146,7 +152,6 @@ export function HomePage() {
         setUserProfile(DEV_STUB_PROFILE);
         if (isActive) {
           setCanRenderMap(true);
-          setIsLoading(false);
         }
         return;
       }
@@ -155,7 +160,6 @@ export function HomePage() {
       if (cachedProfile && isActive) {
         setUserProfile(cachedProfile);
         setCanRenderMap(true);
-        setIsLoading(false);
       }
 
       try {
@@ -169,7 +173,7 @@ export function HomePage() {
         } else if (cachedProfile && !user) {
           clearCachedProfile(telegramUserId);
           setUserProfile(null);
-          setCanRenderMap(false);
+          setCanRenderMap(true);
           setIsOnboardingOpen(true);
         } else {
           setIsOnboardingOpen(true);
@@ -178,8 +182,6 @@ export function HomePage() {
         if (!isActive) return;
         setError(err instanceof Error ? err.message : "Failed to load app data");
         setCanRenderMap(true);
-      } finally {
-        if (isActive) setIsLoading(false);
       }
     }
     void bootstrap();
@@ -654,11 +656,6 @@ export function HomePage() {
       setAdminDeletingReviewId(null);
     }
   };
-
-  /* ── Loading ────────────────────────────────────────── */
-  if (isLoading) {
-    return <MapLoader fullScreen />;
-  }
 
   /* ── Main UI ─────────────────────────────────────────── */
   return (

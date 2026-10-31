@@ -46,7 +46,7 @@ export function PlaceFilters({ category, onCategory, lightningOnly, onLightning,
 }
 
 export function MapLoader({ fullScreen = false }: { fullScreen?: boolean }) {
-  return <motion.div className={`shell-loader${fullScreen ? " shell-loader--full" : ""}`} role="status" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+  return <motion.div className={`shell-loader${fullScreen ? " shell-loader--full" : ""}`} role="status" initial={false} exit={{ opacity: 0 }}>
     <div className="shell-loader__orbit"><span /><span /><span /><Compass size={23} strokeWidth={1.5} /></div>
     <strong>Loading map</strong>
     <div className="shell-loader__track"><span /></div>

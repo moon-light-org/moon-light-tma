@@ -41,7 +41,7 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 .shell-chip--select { position: relative; }
 .shell-chip--select select { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
 .explore-map { flex: 1; min-height: 160px; position: relative; margin: 0 32px 22px; border: 1px solid #dce3eb; border-radius: 18px; overflow: hidden; isolation: isolate; background: #eef1f2; box-shadow: 0 2px 4px #17223703; }
-.explore-map .maplibregl-canvas { filter: saturate(.14) contrast(.94) brightness(1.035); }
+
 .map-caption { position: absolute; z-index: 2; top: 17px; left: 17px; display: flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 7px; background: #ffffffed; color: #6b788a; font-size: 10px; box-shadow: 0 2px 8px #17223705; pointer-events: none; }
 .map-list-toggle { position: absolute; top: 17px; right: 17px; z-index: 3; display: flex; align-items: center; gap: 6px; border: 1px solid #e4e8ee; background: #ffffffed; border-radius: 7px; padding: 8px 11px; font-size: 10px; color: #536176; }
 .explore-map .map-actions { right: 17px; bottom: 116px; gap: 8px; }
