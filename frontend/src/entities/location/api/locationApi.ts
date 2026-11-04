@@ -114,6 +114,18 @@ export async function fetchLocations(
   return response.map(normalizeLocation).filter((location): location is Location => location !== null);
 }
 
+export async function createLocationCheckIn(
+  locationId: number,
+  position: { latitude: number; longitude: number; accuracyMeters: number | null },
+  telegramInitData: string | null
+): Promise<{ id: number; checkedInAt: string; nextEligibleAt: string }> {
+  return httpJson(`/api/locations/${locationId}/check-ins`, {
+    method: "POST",
+    telegramInitData,
+    body: position,
+  });
+}
+
 export async function createLocation(
   payload: CreateLocationPayload,
   telegramInitData: string | null

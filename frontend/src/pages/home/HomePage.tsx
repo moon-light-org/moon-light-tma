@@ -7,6 +7,7 @@ import {
   createLocation,
   createLocationReview,
   createLocationReport,
+  createLocationCheckIn,
   fetchLocationPhotos,
   fetchLocationReviews,
   fetchAdminLocations,
@@ -40,7 +41,7 @@ import { DiscoverView } from "../../features/discover/ui/DiscoverView";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
 import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
-import { canRequestLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../../shared/telegram/location";
+import { canRequestLocation, getCheckInLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../../shared/telegram/location";
 import { LocationMap } from "../../widgets/location-map/LocationMap";
 import { HomeControls } from "../../widgets/mobile-home/HomeControls";
 import { BottomNavigation, ExploreToolbar, MapLoader, PlacePreview } from "../../widgets/mobile-home/AppShell";
@@ -377,17 +378,14 @@ export function HomePage() {
     void fetchLocations(telegramInitData, { limit: 100 })
       .then((loaded) => {
         if (isActive) {
+          setIsDiscoverLoading(false);
           setLocations(loaded);
         }
       })
       .catch((err: unknown) => {
         if (isActive) {
-          setError(err instanceof Error ? err.message : "Failed to load places");
-        }
-      })
-      .finally(() => {
-        if (isActive) {
           setIsDiscoverLoading(false);
+          setError(err instanceof Error ? err.message : "Failed to load places");
         }
       });
     return () => {
@@ -441,6 +439,12 @@ export function HomePage() {
   const handleCreateLocationReport = async (payload: CreateLocationReportPayload) => {
     if (!selectedLocation) return;
     await createLocationReport(selectedLocation.id, payload, telegramInitData);
+  };
+
+  const handleCheckIn = async () => {
+    if (!selectedLocation) return;
+    const position = await getCheckInLocation();
+    await createLocationCheckIn(selectedLocation.id, position, telegramInitData);
   };
 
   const handleLocateMe = () => {
@@ -692,6 +696,7 @@ export function HomePage() {
           </motion.section>
 
           <LocationDetailSheet
+            key={selectedLocation?.id ?? "map-detail"}
             isOpen={isDetailOpen && Boolean(selectedLocation)}
             location={selectedLocation}
             photos={selectedLocationPhotos}
@@ -702,6 +707,7 @@ export function HomePage() {
             onClose={handleCloseLocationDetail}
             onCreateReview={handleCreateLocationReview}
             onCreateReport={handleCreateLocationReport}
+            onCheckIn={handleCheckIn}
           />
 
           {/* Search sheet */}
@@ -737,6 +743,7 @@ export function HomePage() {
             onLightning={handleToggleLightning}
           />
           <LocationDetailSheet
+            key={selectedLocation?.id ?? "explore-detail"}
             isOpen={isDetailOpen && Boolean(selectedLocation)}
             location={selectedLocation}
             photos={selectedLocationPhotos}
@@ -749,6 +756,7 @@ export function HomePage() {
             onShowOnMap={handleShowSelectedOnMap}
             onCreateReview={handleCreateLocationReview}
             onCreateReport={handleCreateLocationReport}
+            onCheckIn={handleCheckIn}
           />
         </>
       ) : null}

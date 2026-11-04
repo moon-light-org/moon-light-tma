@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BadgeCheck, Map, ShieldAlert, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Map, MapPinCheck, ShieldAlert, X } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 import { ReviewFlowModal } from "./ReviewFlowModal";
@@ -19,6 +19,7 @@ type LocationDetailSheetProps = {
   onShowOnMap?: () => void;
   onCreateReview: (payload: CreateLocationReviewPayload) => Promise<void>;
   onCreateReport: (payload: CreateLocationReportPayload) => Promise<void>;
+  onCheckIn: () => Promise<void>;
 };
 
 const REVIEW_TITLE_MAX_LENGTH = 42;
@@ -83,6 +84,7 @@ export function LocationDetailSheet({
   onShowOnMap,
   onCreateReview,
   onCreateReport,
+  onCheckIn,
 }: LocationDetailSheetProps) {
   const [isReviewFlowOpen, setIsReviewFlowOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -90,6 +92,9 @@ export function LocationDetailSheet({
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [checkInMessage, setCheckInMessage] = useState<string | null>(null);
+  const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const orderedPhotos = useMemo(() => {
     const list = [...photos];
     if (location?.image_url) {
@@ -120,8 +125,15 @@ export function LocationDetailSheet({
       setIsSubmittingReview(false);
       setShowAllReviews(false);
       setError(null);
+      setCheckInMessage(null);
+      setHasCheckedIn(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    setCheckInMessage(null);
+    setHasCheckedIn(false);
+  }, [location?.id]);
 
   if (!isOpen || !location) {
     return null;
@@ -145,6 +157,20 @@ export function LocationDetailSheet({
     finally { setIsSubmittingReport(false); }
   };
 
+  const handleCheckIn = async () => {
+    setIsCheckingIn(true);
+    setCheckInMessage(null);
+    try {
+      await onCheckIn();
+      setHasCheckedIn(true);
+      setCheckInMessage("Check-in confirmed. Thanks for visiting!");
+    } catch (err) {
+      setCheckInMessage(err instanceof Error ? err.message : "Could not check in. Try again.");
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
   const isPage = variant === "page";
 
   const body = (
@@ -153,41 +179,53 @@ export function LocationDetailSheet({
         onClick={(e) => e.stopPropagation()}
       >
         {isPage ? null : <div className="sheet-handle" />}
-        <div className="location-detail-hero">
-          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <div className="location-detail-hero__skeleton" aria-hidden="true" />}
+        <div className={`location-detail-hero${heroPhoto ? " location-detail-hero--photo" : " location-detail-hero--empty"}`}>
+          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <span className="location-detail-hero__icon" aria-hidden="true"><CategoryIcon size={28} strokeWidth={1.5} /></span>}
         </div>
-        <div className="sheet-header location-detail-header">
-          <div className="location-detail-title">
-            <h3>{location.name}</h3>
-            <div className="location-detail-badges">
-              <span className="location-detail-category"><CategoryIcon size={14} />{category.label}</span>
-              <span className={`location-detail-verification ${location.is_approved ? "is-verified" : "is-unverified"}`}>
-                {location.is_approved ? <BadgeCheck size={14} /> : <ShieldAlert size={14} />}
-                {location.is_approved ? "Verified" : "Not verified"}
-              </span>
+        <div className="location-detail-summary">
+          <div className="sheet-header location-detail-header">
+            {isPage ? <button type="button" className="sheet-close" onClick={onClose} aria-label="Back to list"><ArrowLeft size={18} /></button> : null}
+            <div className="location-detail-title">
+              <h3>{location.name}</h3>
+              <div className="location-detail-badges">
+                <span className="location-detail-category"><CategoryIcon size={14} />{category.label}</span>
+                <span className={`location-detail-verification ${location.is_approved ? "is-verified" : "is-unverified"}`}>
+                  {location.is_approved ? <BadgeCheck size={14} /> : <ShieldAlert size={14} />}
+                  {location.is_approved ? "Verified" : "Not verified"}
+                </span>
+              </div>
             </div>
+            {!isPage ? <button type="button" className="sheet-close" onClick={onClose} aria-label="Close"><X size={16} /></button> : null}
           </div>
-          <button type="button" className="sheet-close" onClick={onClose} aria-label={isPage ? "Back to list" : "Close"}>
-            {isPage ? <ArrowLeft size={16} /> : <X size={16} />}
-          </button>
-        </div>
-
-        <div className="location-detail-location-row">
-          <p className="sheet-coords">
-            {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-          </p>
-          {onShowOnMap ? (
-            <button type="button" className="location-detail-map-link" onClick={onShowOnMap}>
-              <Map size={14} />
-              Show on map
-            </button>
-          ) : null}
+          <div className="location-detail-location-row">
+            <p className="sheet-coords">
+              {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+            </p>
+            {onShowOnMap ? (
+              <button type="button" className="location-detail-map-link" onClick={onShowOnMap}>
+                <Map size={14} />
+                Show on map
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="sheet-body location-detail-body">
+          <section className="location-detail-section location-detail-check-in" aria-label="Check in">
+            <div>
+              <strong>Here at this place?</strong>
+              <p>Check in when you are within 100 m.</p>
+            </div>
+            <button type="button" className="btn-primary" disabled={!canContribute || isCheckingIn || hasCheckedIn} onClick={handleCheckIn}>
+              <MapPinCheck size={16} />{isCheckingIn ? "Checking…" : hasCheckedIn ? "Checked in" : "Check in"}
+            </button>
+            {!canContribute ? <p className="location-detail-check-in__message">Open MoonLight in Telegram and create a profile to check in.</p> : null}
+            {checkInMessage ? <p className="location-detail-check-in__message" role="status">{checkInMessage}</p> : null}
+            {hasCheckedIn ? <button type="button" className="location-detail-check-in__review" onClick={() => setIsReviewFlowOpen(true)}>Review this place</button> : null}
+          </section>
           <section className="location-detail-section location-detail-description-card">
             <div className="location-detail-section-heading">
-              <h4>Description</h4>
+              <h4>About this place</h4>
             </div>
             <div className="location-detail-description">
               <p>{location.description?.trim() || "No description yet."}</p>
@@ -237,12 +275,12 @@ export function LocationDetailSheet({
               {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No reviews yet.</p> : null}
               {reviews.length > 0 ? (
                 <>
-                  <div className="location-review-carousel" aria-label="Reviews carousel">
-                    {reviews.slice(0, 8).map((review) => (
+                  <div className="location-review-carousel" aria-label="Recent reviews">
+                    {reviews.slice(0, 2).map((review) => (
                       <article key={review.id} className="location-review-carousel-card">
                         <div className="location-review-carousel-card__head">
                           <span className="location-review-carousel-card__avatar">{getReviewInitial(review)}</span>
-                          <strong>{getReviewTitle(review)}</strong>
+                          <strong>{review.user_nickname || (review.source === "btcmap" ? "BTCMap visitor" : "MoonLight visitor")}</strong>
                         </div>
                         <div className="location-review-carousel-card__meta">
                           {renderStars(review.rating)}
@@ -253,15 +291,15 @@ export function LocationDetailSheet({
                       </article>
                     ))}
                   </div>
-                  <button type="button" className="location-review-see-all" onClick={() => setShowAllReviews((value) => !value)}>
-                    {showAllReviews ? "Hide reviews" : "See all reviews"}
+                  {reviews.length > 2 ? <button type="button" className="location-review-see-all" onClick={() => setShowAllReviews((value) => !value)}>
+                    {showAllReviews ? "Show fewer reviews" : `See all ${reviews.length} reviews`}
                     <span aria-hidden="true">›</span>
-                  </button>
+                  </button> : null}
                 </>
               ) : null}
               {showAllReviews ? (
                 <div className="location-review-list location-review-list--expanded">
-                  {reviews.map((review) => (
+                  {reviews.slice(2).map((review) => (
                     <article key={review.id} className="location-review-item">
                       <strong>{getReviewTitle(review)}</strong>
                       <div className="location-review-item__meta">
@@ -316,7 +354,7 @@ export function LocationDetailSheet({
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Location details">
+    <div className="sheet-backdrop location-detail-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="Location details">
       {body}
     </div>
   );

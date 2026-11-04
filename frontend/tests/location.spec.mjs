@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { canRequestLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../.tmp-tests/location.js";
+import { canRequestLocation, getCheckInLocation, getCurrentLocation, openLocationSettingsIfDenied } from "../.tmp-tests/location.js";
 
 const position = { latitude: 33.7, longitude: 73.0 };
 let browserCalls = 0;
@@ -37,6 +37,13 @@ assert.deepEqual(await getCurrentLocation(), position);
 assert.equal(initCalls, 0);
 assert.equal(nativeCalls, 1, "Previously granted access still returns a fresh location");
 assert.equal(browserCalls, 0);
+
+setup({ requested: true, granted: true, inited: true, result: { ...position, horizontal_accuracy: 12 } });
+assert.deepEqual(await getCheckInLocation(), { ...position, accuracyMeters: 12 });
+assert.equal(browserCalls, 0, "Check-in uses the Telegram fix and its accuracy");
+
+setup({ requested: true, granted: true, inited: true });
+assert.deepEqual(await getCheckInLocation(), { ...position, accuracyMeters: null }, "Missing accuracy must remain explicit");
 
 setup({ requested: true, granted: false });
 await assert.rejects(getCurrentLocation(), /Location access is disabled/);

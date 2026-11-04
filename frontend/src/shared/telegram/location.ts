@@ -1,6 +1,7 @@
 import { loadTelegramWebApp } from "./webAppSdk.js";
 
 export type Coordinates = { latitude: number; longitude: number };
+export type LocationFix = Coordinates & { accuracyMeters: number | null };
 
 type LocationManager = {
   isInited: boolean;
@@ -8,7 +9,7 @@ type LocationManager = {
   isAccessRequested: boolean;
   isAccessGranted: boolean;
   init(callback: () => void): void;
-  getLocation(callback: (location: Coordinates | null) => void): void;
+  getLocation(callback: (location: (Coordinates & { horizontal_accuracy?: number | null }) | null) => void): void;
   openSettings(): void;
 };
 
@@ -109,4 +110,44 @@ export async function getCurrentLocation(): Promise<Coordinates> {
     }
   }
   return { latitude: position.coords.latitude, longitude: position.coords.longitude };
+}
+
+/** Check-ins need a new fix and its reported accuracy, not the map's cached coordinates. */
+export async function getCheckInLocation(): Promise<LocationFix> {
+  const sdkLoaded = typeof document === "undefined" ? true : await loadTelegramWebApp();
+  if (!sdkLoaded && /tgWebAppData=/.test(window.location.hash + window.location.search)) {
+    throw new Error("Telegram location is still starting. Try again.");
+  }
+  const manager = getLocationManager();
+  if (manager) {
+    if (!manager.isInited) await waitForCallback<void>((done) => manager.init(() => done()));
+    if (manager.isLocationAvailable) {
+      if (manager.isAccessRequested && !manager.isAccessGranted) {
+        throw new Error("Location access is disabled. Open Telegram location settings and try again.");
+      }
+      const location = await waitForCallback<Coordinates & { horizontal_accuracy?: number | null } | null>((done) => manager.getLocation(done));
+      if (!location) throw new Error("Location was not shared. Enable location access and try again.");
+      if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+        throw new Error("Your current location is unavailable. Try again.");
+      }
+      return {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracyMeters: Number.isFinite(location.horizontal_accuracy) ? location.horizontal_accuracy! : null,
+      };
+    }
+  }
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    throw new Error("Geolocation is not available on this device.");
+  }
+  try {
+    const position = await browserPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+    };
+  } catch (error) {
+    throw new Error(browserErrorMessage(error));
+  }
 }
