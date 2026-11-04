@@ -13,6 +13,8 @@ type LocationManager = {
   openSettings(): void;
 };
 
+class LocationTimeoutError extends Error {}
+
 function getLocationManager(): LocationManager | null {
   if (typeof window === "undefined") return null;
   const webApp = (window as Window & {
@@ -26,9 +28,9 @@ function getLocationManager(): LocationManager | null {
   return webApp.LocationManager ?? null;
 }
 
-function waitForCallback<T>(start: (done: (result: T) => void) => void): Promise<T> {
+function waitForCallback<T>(start: (done: (result: T) => void) => void, timeoutMs = 20000): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("Location is taking too long. Try again or use search.")), 20000);
+    const timeout = setTimeout(() => reject(new LocationTimeoutError("Location is taking too long. Try again or use search.")), timeoutMs);
     const done = (result: T) => {
       clearTimeout(timeout);
       resolve(result);
@@ -74,22 +76,35 @@ export async function getCurrentLocation(): Promise<Coordinates> {
   }
   const manager = getLocationManager();
   if (manager) {
+    let nativeReady = manager.isInited;
     if (!manager.isInited) {
-      await waitForCallback<void>((done) => manager.init(() => done()));
-    }
-    if (manager.isLocationAvailable) {
-      if (manager.isAccessRequested && !manager.isAccessGranted) {
-        throw new Error("Location access is disabled. Tap the location button to open Telegram settings, or use search.");
+      try {
+        await waitForCallback<void>((done) => manager.init(() => done()), 8000);
+        nativeReady = true;
+      } catch (error) {
+        if (!(error instanceof LocationTimeoutError)) throw error;
       }
-      const location = await waitForCallback<Coordinates | null>((done) => manager.getLocation(done));
-      if (!location) {
+    }
+    if (manager.isAccessRequested && !manager.isAccessGranted) {
+      throw new Error("Location access is disabled. Tap the location button to open Telegram settings, or use search.");
+    }
+    if (nativeReady && manager.isLocationAvailable) {
+      let location: Coordinates | null | undefined;
+      try {
+        location = await waitForCallback<Coordinates | null>((done) => manager.getLocation(done), 8000);
+      } catch (error) {
+        if (!(error instanceof LocationTimeoutError)) throw error;
+      }
+      if (location === null) {
         // Do not ask through the browser after Telegram has declined the request.
         throw new Error("Location was not shared. You can enable it in the bot's location settings or use search.");
       }
-      if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
-        throw new Error("Your current location is unavailable right now. Try again or use search.");
+      if (location) {
+        if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+          throw new Error("Your current location is unavailable right now. Try again or use search.");
+        }
+        return { latitude: location.latitude, longitude: location.longitude };
       }
-      return { latitude: location.latitude, longitude: location.longitude };
     }
   }
 
@@ -120,34 +135,55 @@ export async function getCheckInLocation(): Promise<LocationFix> {
   }
   const manager = getLocationManager();
   if (manager) {
-    if (!manager.isInited) await waitForCallback<void>((done) => manager.init(() => done()));
-    if (manager.isLocationAvailable) {
-      if (manager.isAccessRequested && !manager.isAccessGranted) {
-        throw new Error("Location access is disabled. Open Telegram location settings and try again.");
+    let nativeReady = manager.isInited;
+    if (!nativeReady) {
+      try {
+        await waitForCallback<void>((done) => manager.init(() => done()), 8000);
+        nativeReady = true;
+      } catch (error) {
+        if (!(error instanceof LocationTimeoutError)) throw error;
       }
-      const location = await waitForCallback<Coordinates & { horizontal_accuracy?: number | null } | null>((done) => manager.getLocation(done));
-      if (!location) throw new Error("Location was not shared. Enable location access and try again.");
-      if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
-        throw new Error("Your current location is unavailable. Try again.");
+    }
+    if (manager.isAccessRequested && !manager.isAccessGranted) {
+      throw new Error("Location access is disabled. Open Telegram location settings and try again.");
+    }
+    if (nativeReady && manager.isLocationAvailable) {
+      let location: (Coordinates & { horizontal_accuracy?: number | null }) | null | undefined;
+      try {
+        location = await waitForCallback<Coordinates & { horizontal_accuracy?: number | null } | null>((done) => manager.getLocation(done), 8000);
+      } catch (error) {
+        if (!(error instanceof LocationTimeoutError)) throw error;
       }
-      return {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracyMeters: Number.isFinite(location.horizontal_accuracy) ? location.horizontal_accuracy! : null,
-      };
+      if (location === null) throw new Error("Location was not shared. Enable location access and try again.");
+      if (location) {
+        if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+          throw new Error("Your current location is unavailable. Try again.");
+        }
+        return {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracyMeters: Number.isFinite(location.horizontal_accuracy) ? location.horizontal_accuracy! : null,
+        };
+      }
     }
   }
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     throw new Error("Geolocation is not available on this device.");
   }
+  let position: GeolocationPosition;
   try {
-    const position = await browserPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-    return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
-    };
-  } catch (error) {
-    throw new Error(browserErrorMessage(error));
+    position = await browserPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+  } catch (initialError) {
+    if ((initialError as { code?: number } | null)?.code === 1) throw new Error(browserErrorMessage(initialError));
+    try {
+      position = await browserPosition({ enableHighAccuracy: false, timeout: 8000, maximumAge: 0 });
+    } catch (error) {
+      throw new Error(browserErrorMessage(error));
+    }
   }
+  return {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+  };
 }

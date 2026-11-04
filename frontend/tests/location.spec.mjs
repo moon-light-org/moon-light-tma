@@ -45,7 +45,40 @@ assert.equal(browserCalls, 0, "Check-in uses the Telegram fix and its accuracy")
 setup({ requested: true, granted: true, inited: true });
 assert.deepEqual(await getCheckInLocation(), { ...position, accuracyMeters: null }, "Missing accuracy must remain explicit");
 
+setup({ available: false });
+navigator.geolocation.getCurrentPosition = (success, failure, options) => {
+  browserCalls++;
+  if (options.enableHighAccuracy) failure({ code: 3 });
+  else success({ coords: { ...position, accuracy: 24 } });
+};
+assert.deepEqual(await getCheckInLocation(), { ...position, accuracyMeters: 24 }, "Check-in retries after a precise location timeout");
+assert.equal(browserCalls, 2);
+
+const stalledManager = setup({ requested: true, granted: true, inited: true });
+stalledManager.getLocation = () => { nativeCalls++; };
+const originalSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = (callback, delay, ...args) => originalSetTimeout(callback, delay === 8000 ? 0 : delay, ...args);
+try {
+  assert.deepEqual(await getCheckInLocation(), { ...position, accuracyMeters: null }, "A stalled Telegram bridge falls back when access was granted");
+  assert.equal(nativeCalls, 1);
+  assert.equal(browserCalls, 1);
+} finally {
+  globalThis.setTimeout = originalSetTimeout;
+}
+
+const stalledMapManager = setup({ requested: true, granted: true, inited: true });
+stalledMapManager.getLocation = () => { nativeCalls++; };
+globalThis.setTimeout = (callback, delay, ...args) => originalSetTimeout(callback, delay === 8000 ? 0 : delay, ...args);
+try {
+  assert.deepEqual(await getCurrentLocation(), position, "Map location recovers from a stalled Telegram bridge");
+  assert.equal(browserCalls, 1);
+} finally {
+  globalThis.setTimeout = originalSetTimeout;
+}
+
 setup({ requested: true, granted: false });
+await assert.rejects(getCheckInLocation(), /Location access is disabled/);
+assert.equal(browserCalls, 0, "Check-in must not bypass a Telegram permission denial");
 await assert.rejects(getCurrentLocation(), /Location access is disabled/);
 assert.equal(nativeCalls, 0, "Do not request permission again after a denial");
 assert.equal(browserCalls, 0, "Do not bypass native denial with a browser prompt");
