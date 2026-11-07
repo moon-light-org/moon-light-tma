@@ -86,9 +86,14 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
     setStep(previousStep);
   };
 
-  return <div className="onboarding-shell" role="dialog" aria-modal="true" aria-label="Add review">
+  return <div className="onboarding-shell onboarding-shell--review" role="dialog" aria-modal="true" aria-label="Add review">
     <section className="onboarding-panel onboarding-panel--form onboarding-panel--review" onClick={(event) => event.stopPropagation()}>
-      <button type="button" className="sheet-close review-flow-close" disabled={isSubmitting} onClick={close} aria-label="Close review flow"><X size={16} /></button>
+      <div className="sheet-handle" aria-hidden="true" />
+      <header className="review-flow-header">
+        <h2>Add review</h2>
+        <button type="button" className="sheet-close review-flow-close" disabled={isSubmitting} onClick={close} aria-label="Close review flow"><X size={16} /></button>
+      </header>
+      <div className="review-flow-card">
       {step === "payment" ? <><span className="onboarding-eyebrow">Step 1 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Payment status</h1><p>How can you pay at this place?</p>
         {paymentOptions.map((option) => <button key={option.value} type="button" disabled={isSubmitting} className={`btn-secondary ${paymentStatus === option.value ? "active" : ""}`} onClick={() => choosePaymentStatus(option.value)}>{option.label}</button>)}<button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => choosePaymentStatus(null)}>Skip</button></> : null}
       {step === "wallet" ? <><span className="onboarding-eyebrow">Step 2 of 4</span><h1 ref={stepHeadingRef} tabIndex={-1}>Which wallet did you use?</h1><p>This is optional.</p>
@@ -103,6 +108,7 @@ export function ReviewFlowModal({ isOpen, isSubmitting, error, onClose, onSubmit
         <div className="review-flow-navigation"><button type="button" className="review-flow-link review-flow-back" disabled={isSubmitting} onClick={() => goBack(paymentStatus === "lightning" ? "rating" : "payment")}>Back</button><button type="button" className="btn-primary review-flow-forward" disabled={isSubmitting} onClick={() => void submit()}>{isSubmitting ? "Sending..." : "Submit review"}</button></div></> : null}
       {step === "success" ? <><dotlottie-wc className="onboarding-lottie onboarding-lottie--review-success" src={REVIEW_SUCCESS_LOTTIE_SRC} autoplay loop aria-hidden="true" /><span className="onboarding-eyebrow">Review added</span><h1 ref={stepHeadingRef} tabIndex={-1}>Thanks for the feedback</h1><p>Your review is now live. This closes automatically in a moment.</p></> : null}
       {localError ? <p className="onboarding-error">{localError}</p> : null}{error ? <p className="onboarding-error">{error}</p> : null}
+      </div>
     </section>
   </div>;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BadgeCheck, Map, MapPinCheck, ShieldAlert, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Bitcoin, Clock3, Copy, CreditCard, ExternalLink, Flag, Map, MapPin, MapPinCheck, MessageSquarePlus, Phone, ShieldAlert, X, Zap } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../../entities/location/model/mainCategories";
 import type { CreateLocationReportPayload, CreateLocationReviewPayload, Location, LocationPhoto, LocationReview } from "../../../entities/location/model/types";
 import { ReviewFlowModal } from "./ReviewFlowModal";
@@ -67,8 +67,8 @@ function formatReviewDate(value: string): string {
 
 function renderStars(rating: number | null) {
   if (rating === null) return null;
-  const filled = Math.max(0, Math.min(5, rating === 0 ? 0 : Math.round((rating / 3) * 5)));
-  return <span className="location-review-carousel-card__stars" aria-label={`${rating} out of 3 rating`}>{"★".repeat(filled)}{"☆".repeat(5 - filled)}</span>;
+  const filled = Math.max(0, Math.min(3, Math.round(rating)));
+  return <span className="location-review-carousel-card__stars" aria-label={`${rating} out of 3 rating`}>{"★".repeat(filled)}{"☆".repeat(3 - filled)}</span>;
 }
 
 export function LocationDetailSheet({
@@ -97,7 +97,7 @@ export function LocationDetailSheet({
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const orderedPhotos = useMemo(() => {
     const list = [...photos];
-    if (location?.image_url) {
+    if (location?.image_url && !location.image_url.includes("/category-defaults/")) {
       const alreadyPresent = list.some((p) => p.image_url === location.image_url);
       if (!alreadyPresent) {
         list.unshift({
@@ -114,9 +114,14 @@ export function LocationDetailSheet({
     }
     return list;
   }, [photos, location]);
-  const heroPhoto = orderedPhotos[0]?.image_url ?? null;
+  const heroPhoto = orderedPhotos[0]?.image_url ?? location?.image_url ?? null;
+  const isCategoryImage = heroPhoto?.includes("/category-defaults/") ?? false;
   const category = MAIN_CATEGORY_BY_VALUE[location?.main_category ?? "other"];
   const CategoryIcon = category.Icon;
+  const ratedReviews = reviews.filter((review) => review.rating !== null);
+  const averageRating = ratedReviews.length
+    ? (ratedReviews.reduce((total, review) => total + (review.rating ?? 0), 0) / ratedReviews.length).toFixed(1)
+    : null;
 
   useEffect(() => {
     if (!isOpen) {
@@ -172,6 +177,7 @@ export function LocationDetailSheet({
   };
 
   const isPage = variant === "page";
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${location.latitude},${location.longitude}`)}`;
 
   const body = (
       <div
@@ -179,45 +185,37 @@ export function LocationDetailSheet({
         onClick={(e) => e.stopPropagation()}
       >
         {isPage ? null : <div className="sheet-handle" />}
-        <div className={`location-detail-hero${heroPhoto ? " location-detail-hero--photo" : " location-detail-hero--empty"}`}>
-          {heroPhoto ? <img src={heroPhoto} alt={location.name} /> : <span className="location-detail-hero__icon" aria-hidden="true"><CategoryIcon size={28} strokeWidth={1.5} /></span>}
-        </div>
         <div className="location-detail-summary">
           <div className="sheet-header location-detail-header">
             {isPage ? <button type="button" className="sheet-close" onClick={onClose} aria-label="Back to list"><ArrowLeft size={18} /></button> : null}
             <div className="location-detail-title">
               <h3>{location.name}</h3>
-              <div className="location-detail-badges">
-                <span className="location-detail-category"><CategoryIcon size={14} />{category.label}</span>
-                <span className={`location-detail-verification ${location.is_approved ? "is-verified" : "is-unverified"}`}>
-                  {location.is_approved ? <BadgeCheck size={14} /> : <ShieldAlert size={14} />}
-                  {location.is_approved ? "Verified" : "Not verified"}
-                </span>
-              </div>
             </div>
             {!isPage ? <button type="button" className="sheet-close" onClick={onClose} aria-label="Close"><X size={16} /></button> : null}
           </div>
-          <div className="location-detail-location-row">
-            <p className="sheet-coords">
-              {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
-            </p>
-            {onShowOnMap ? (
-              <button type="button" className="location-detail-map-link" onClick={onShowOnMap}>
-                <Map size={14} />
-                Show on map
-              </button>
-            ) : null}
+          <div className="location-detail-badges">
+            <span className="location-detail-category"><CategoryIcon size={16} />{category.label}</span>
+            {location.accepts_lightning ? <span className="location-detail-payment-badge"><Zap size={16} />Lightning</span> : null}
+            {location.accepts_bitcoin ? <span className="location-detail-payment-badge"><Bitcoin size={16} />On-chain BTC</span> : null}
+            <span className={`location-detail-verification ${location.is_approved ? "is-verified" : "is-unverified"}`}>
+              {location.is_approved ? <BadgeCheck size={16} /> : <ShieldAlert size={16} />}
+              {location.is_approved ? "Verified" : "Not verified"}
+            </span>
           </div>
         </div>
 
         <div className="sheet-body location-detail-body">
+          <div className={`location-detail-hero${heroPhoto ? " location-detail-hero--photo" : " location-detail-hero--empty"}`}>
+            {heroPhoto ? <img src={heroPhoto} alt={isCategoryImage ? `${category.label} category illustration` : location.name} /> : <span className="location-detail-hero__icon" aria-hidden="true"><CategoryIcon size={28} strokeWidth={1.5} /></span>}
+          </div>
           <section className="location-detail-section location-detail-check-in" aria-label="Check in">
-            <div>
-              <strong>Here at this place?</strong>
-              <p>Check in when you are within 100 m.</p>
+            <span className="location-detail-check-in__icon" aria-hidden="true"><MapPinCheck size={22} /></span>
+            <div className="location-detail-check-in__copy">
+              <strong>Check in at this place</strong>
+              <p>Available when you are within 100 m.</p>
             </div>
             <button type="button" className="btn-primary" disabled={!canContribute || isCheckingIn || hasCheckedIn} onClick={handleCheckIn}>
-              <MapPinCheck size={16} />{isCheckingIn ? "Checking…" : hasCheckedIn ? "Checked in" : "Check in"}
+              {isCheckingIn ? "Checking…" : hasCheckedIn ? "Checked in" : "Check in"}
             </button>
             {!canContribute ? <p className="location-detail-check-in__message">Open MoonLight in Telegram and create a profile to check in.</p> : null}
             {checkInMessage ? <p className="location-detail-check-in__message" role="status">{checkInMessage}</p> : null}
@@ -225,29 +223,32 @@ export function LocationDetailSheet({
           </section>
           <section className="location-detail-section location-detail-description-card">
             <div className="location-detail-section-heading">
-              <h4>About this place</h4>
+              <h4>Business details</h4>
             </div>
             <div className="location-detail-description">
               <p>{location.description?.trim() || "No description yet."}</p>
               <div className="location-detail-facts">
-                {location.address ? <p><strong>Address</strong><span>{location.address}</span></p> : null}
-                {location.phone ? <p><strong>Phone</strong><a href={`tel:${location.phone}`}>{location.phone}</a></p> : null}
-                {location.schedules ? <p><strong>Hours</strong><span>{location.schedules}</span></p> : null}
+                {location.address ? <div className="location-detail-fact"><MapPin size={18} /><div><strong>Address</strong><span>{location.address}</span></div><button type="button" aria-label="Copy address" onClick={() => { void navigator.clipboard?.writeText(location.address ?? ""); }}><Copy size={17} /></button></div> : null}
+                {location.phone ? <div className="location-detail-fact"><Phone size={18} /><div><strong>Phone</strong><span>{location.phone}</span></div><a href={`tel:${location.phone}`}>Call</a></div> : null}
+                {location.schedules ? <div className="location-detail-fact"><Clock3 size={18} /><div><strong>Hours</strong><span>{location.schedules}</span></div></div> : null}
                 {location.accepts_bitcoin !== null || location.accepts_lightning !== null ? (
-                  <p>
-                    <strong>Payments</strong>
-                    <span>{[
+                  <div className="location-detail-fact"><CreditCard size={18} /><div>
+                    <strong>Payments</strong><span>{[
                       location.accepts_bitcoin ? "Bitcoin" : null,
                       location.accepts_lightning ? "Lightning" : null,
-                    ].filter(Boolean).join(" + ") || "Bitcoin support not confirmed"}</span>
-                  </p>
+                    ].filter(Boolean).join(" + ") || "Bitcoin support not confirmed"}</span></div>
+                  </div>
                 ) : null}
               </div>
               {location.website_url ? (
-                <a className="location-card__link" href={location.website_url} target="_blank" rel="noreferrer">
+                <a className="location-detail-website" href={location.website_url} target="_blank" rel="noreferrer">
                   Visit website
                 </a>
               ) : null}
+              <div className="location-detail-map-actions">
+                {onShowOnMap ? <button type="button" className="location-detail-map-link" onClick={onShowOnMap}><Map size={16} />Show on map</button> : null}
+                <a className="location-detail-map-link" href={googleMapsUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} />Open in Google Maps</a>
+              </div>
             </div>
           </section>
 
@@ -269,7 +270,8 @@ export function LocationDetailSheet({
 
           <section className="location-detail-section location-detail-review-section">
               <div className="location-detail-review-heading">
-                <h4>Reviews</h4>
+                <h4>Reviews <span>{reviews.length}</span></h4>
+                {averageRating ? <p aria-label={`Average rating ${averageRating} out of 3`}>★ {averageRating} / 3.0</p> : null}
               </div>
               {reviewsLoading ? <p>Loading reviews...</p> : null}
               {!reviewsLoading && reviews.length === 0 ? <p className="location-detail-review-empty">No reviews yet.</p> : null}
@@ -314,10 +316,10 @@ export function LocationDetailSheet({
               ) : null}
               <div className="location-detail-review-actions">
                 <button type="button" className="btn-secondary location-detail-review-add" disabled={!canContribute} onClick={() => setIsReviewFlowOpen(true)}>
-                  Add review
+                  <MessageSquarePlus size={17} /> Add review
                 </button>
                 <button type="button" className="location-detail-report-link" disabled={!canContribute} onClick={() => setIsReportFlowOpen(true)}>
-                  Report location
+                  <Flag size={17} /> Report location
                 </button>
               </div>
           </section>
