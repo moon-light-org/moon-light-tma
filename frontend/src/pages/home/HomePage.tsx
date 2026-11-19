@@ -38,6 +38,8 @@ import { clearCachedProfile, readCachedProfile, writeCachedProfile } from "../..
 import { AddLocationModal } from "../../features/add-location/ui/AddLocationModal";
 import { TapLocationSheet } from "../../features/add-location/ui/TapLocationSheet";
 import { DiscoverView } from "../../features/discover/ui/DiscoverView";
+import { fetchHomeData, fetchHomeSection, type HomeData, type HomeSection, type HomeSectionPage } from "../../features/home/api/homeApi";
+import { HomeView } from "../../features/home/ui/HomeView";
 import { LocationDetailSheet } from "../../features/location-detail/ui/LocationDetailSheet";
 import { SearchSheet } from "../../features/search/ui/SearchSheet";
 import { getTelegramInitData, useTelegramUser } from "../../shared/telegram/useTelegramUser";
@@ -81,6 +83,13 @@ export function HomePage() {
   const [pickedCoordinates,  setPickedCoordinates]  = useState<{ latitude: number; longitude: number } | null>(null);
   const [focusCoordinates,   setFocusCoordinates]   = useState<{ latitude: number; longitude: number } | null>(null);
   const [userLocation,        setUserLocation]        = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [homeData, setHomeData] = useState<HomeData | null>(null);
+  const [homeLoading, setHomeLoading] = useState(true);
+  const [homeError, setHomeError] = useState<string | null>(null);
+  const [homeSection, setHomeSection] = useState<HomeSection | null>(null);
+  const [homeSectionPage, setHomeSectionPage] = useState<HomeSectionPage | null>(null);
+  const [homeSectionLoading, setHomeSectionLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<LocationMainCategory | null>(null);
   const [lightningOnly, setLightningOnly] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -90,6 +99,7 @@ export function HomePage() {
   const [isModalOpen,        setIsModalOpen]        = useState(false);
   const [isSearchOpen,       setIsSearchOpen]       = useState(false);
   const [isDiscoverOpen,     setIsDiscoverOpen]     = useState(false);
+  const [isHomeOpen,         setIsHomeOpen]         = useState(true);
   const [isDiscoverLoading,  setIsDiscoverLoading]  = useState(false);
   const [isProfileOpen,      setIsProfileOpen]      = useState(false);
   const [isAwaitingMapPickForNewLocation, setIsAwaitingMapPickForNewLocation] = useState(false);
@@ -124,16 +134,16 @@ export function HomePage() {
   } | null>(null);
   const [lastFetchedBoundsKey, setLastFetchedBoundsKey] = useState<string | null>(null);
   const mapInstanceRef = useRef<MapRef | null>(null);
-  const hasRequestedInitialLocation = useRef(false);
+  const hasRequestedMapLocation = useRef(false);
   const isLocationRequestPending = useRef(false);
   useEffect(() => {
-    if (isMapReady) return;
+    if (isMapReady || isHomeOpen || isDiscoverOpen) return;
     const timeout = window.setTimeout(() => {
       setIsMapReady(true);
       setError("Map loading is taking longer than expected. You can use Explore to find places.");
     }, 10000);
     return () => window.clearTimeout(timeout);
-  }, [isMapReady]);
+  }, [isMapReady, isHomeOpen, isDiscoverOpen]);
   const handleMapReady = useCallback((map: MapRef | null) => {
     mapInstanceRef.current = map;
   }, []);
@@ -208,28 +218,68 @@ export function HomePage() {
     return locations.filter((location) => location.user_id === userProfile.id).length;
   }, [locations, userProfile]);
 
+  const homeSearchLocations = useMemo(() => {
+    const merged = new Map(locations.map((location) => [location.id, location]));
+    for (const location of [...(homeData?.nearby ?? []), ...(homeData?.popular ?? []), ...(homeData?.firstCheckIn ?? [])]) {
+      merged.set(location.id, location);
+    }
+    return [...merged.values()];
+  }, [locations, homeData]);
+
   const isAdminUser = (userProfile?.role ?? "").trim().toLowerCase() === "admin";
 
-  const requestUserLocation = useCallback(() => {
+  const requestUserLocation = useCallback((showMapError = false) => {
     if (isLocationRequestPending.current) return;
     isLocationRequestPending.current = true;
+    setIsLocating(true);
     void getCurrentLocation().then((coords) => {
       setUserLocation(coords);
       setFocusCoordinates(coords);
       setError(null);
+      setHomeError(null);
     }).catch((error: unknown) => {
-      setError(error instanceof Error ? error.message : "Could not get your current location. Try again or use search.");
+      const message = error instanceof Error ? error.message : "Could not get your current location. Try again or use search.";
+      if (showMapError) setError(message);
+      else setHomeError(message);
     }).finally(() => {
       isLocationRequestPending.current = false;
+      setIsLocating(false);
     });
   }, []);
 
   useEffect(() => {
-    // StrictMode replays effects in development; request location only once.
-    if (hasRequestedInitialLocation.current) return;
-    hasRequestedInitialLocation.current = true;
-    requestUserLocation();
-  }, [requestUserLocation]);
+    let active = true;
+    setHomeLoading(true);
+    void fetchHomeData(userLocation, telegramInitData).then((data) => {
+      if (active) { setHomeData(data); setHomeError(null); }
+    }).catch((error: unknown) => {
+      if (active) setHomeError(error instanceof Error ? error.message : "Could not load places.");
+    }).finally(() => { if (active) setHomeLoading(false); });
+    return () => { active = false; };
+  }, [userLocation, telegramInitData]);
+
+  useEffect(() => {
+    if (!homeSection) return;
+    let active = true;
+    setHomeSectionPage(null);
+    setHomeSectionLoading(true);
+    void fetchHomeSection(homeSection, 0, userLocation, telegramInitData).then((page) => {
+      if (active) setHomeSectionPage(page);
+    }).catch((error: unknown) => {
+      if (active) setHomeError(error instanceof Error ? error.message : "Could not load places.");
+    }).finally(() => { if (active) setHomeSectionLoading(false); });
+    return () => { active = false; };
+  }, [homeSection, userLocation, telegramInitData]);
+
+  const loadMoreHomePlaces = () => {
+    if (!homeSection || !homeSectionPage?.nextOffset || homeSectionLoading) return;
+    setHomeSectionLoading(true);
+    void fetchHomeSection(homeSection, homeSectionPage.nextOffset, userLocation, telegramInitData).then((page) => {
+      setHomeSectionPage((current) => current ? { ...page, places: [...current.places, ...page.places] } : page);
+    }).catch((error: unknown) => {
+      setHomeError(error instanceof Error ? error.message : "Could not load more places.");
+    }).finally(() => setHomeSectionLoading(false));
+  };
 
   const submitOnboardingNickname = async (nickname: string) => {
     if (!telegramUser) {
@@ -454,7 +504,7 @@ export function HomePage() {
       setFocusCoordinates({ ...userLocation });
       return;
     }
-    requestUserLocation();
+    requestUserLocation(true);
   };
 
   const handleZoomIn = () => {
@@ -468,7 +518,27 @@ export function HomePage() {
   const leaveDiscoverForMap = () => {
     setIsDetailOpen(false);
     setIsDiscoverOpen(false);
+    setIsHomeOpen(false);
     setCanRenderMap(true);
+  };
+
+  const openMap = () => {
+    setIsProfileOpen(false);
+    leaveDiscoverForMap();
+    if (!userLocation && !hasRequestedMapLocation.current) {
+      hasRequestedMapLocation.current = true;
+      requestUserLocation(true);
+    }
+  };
+
+  const openHome = () => {
+    setIsProfileOpen(false);
+    setError(null);
+    setIsDetailOpen(false);
+    setSelectedLocation(null);
+    setIsDiscoverOpen(false);
+    setIsHomeOpen(true);
+    setHomeSection(null);
   };
 
   const handleShowSelectedOnMap = () => {
@@ -513,7 +583,7 @@ export function HomePage() {
     setProfileError(null);
     setIsProfileOpen(true);
 
-    if (!telegramUser) {
+    if (!telegramUser || IS_DEV_FALLBACK) {
       return;
     }
 
@@ -533,6 +603,7 @@ export function HomePage() {
     if (hasPendingSubmission) {
       return;
     }
+    openMap();
     setIsProfileOpen(false);
     setPickedCoordinates(null);
     setIsTapSheetOpen(false);
@@ -664,9 +735,26 @@ export function HomePage() {
   /* ── Main UI ─────────────────────────────────────────── */
   return (
     <MotionConfig reducedMotion="user"><main className="map-shell app-shell">
-      {canRenderMap && !isDiscoverOpen ? (
+      {isHomeOpen ? <HomeView
+        data={homeData}
+        loading={homeLoading}
+        error={homeError}
+        preciseLocation={userLocation}
+        locating={isLocating}
+        section={homeSection}
+        sectionPage={homeSectionPage}
+        sectionLoading={homeSectionLoading}
+        onSearch={() => setIsSearchOpen(true)}
+        onLocate={requestUserLocation}
+        onMap={openMap}
+        onSelectLocation={handleOpenLocationDetail}
+        onSection={setHomeSection}
+        onMore={loadMoreHomePlaces}
+      /> : null}
+
+      {canRenderMap && !isDiscoverOpen && !isHomeOpen ? (
         <>
-          <ExploreToolbar category={selectedCategory} onCategory={handleSelectCategory} lightningOnly={lightningOnly} onLightning={handleToggleLightning} lightningCount={locations.filter((location) => location.accepts_lightning).length} onSearch={() => setIsSearchOpen(true)} isAdmin={isAdminUser} onAdmin={() => void openAdminPanel()} />
+          <ExploreToolbar category={selectedCategory} onCategory={handleSelectCategory} lightningOnly={lightningOnly} onLightning={handleToggleLightning} lightningCount={locations.filter((location) => location.accepts_lightning).length} onSearch={() => setIsSearchOpen(true)} onBack={openHome} isAdmin={isAdminUser} onAdmin={() => void openAdminPanel()} />
           <motion.section className={`explore-map${selectedLocation ? " has-selection" : ""}`} aria-label="Explore map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .45 }}>
           <LocationMap
             locations={visibleLocations}
@@ -676,7 +764,7 @@ export function HomePage() {
             onMapPickLocation={handlePickLocation}
             onLocationSelect={(location) => { setSelectedLocation(location); setIsDetailOpen(false); }}
             onViewportChange={setViewportBounds}
-            initialCenter={userLocation ?? focusCoordinates ?? undefined}
+            initialCenter={userLocation ?? focusCoordinates ?? homeData?.center ?? undefined}
             focusCoordinates={focusCoordinates}
             userLocation={userLocation}
             onMapReady={handleMapReady}
@@ -695,36 +783,6 @@ export function HomePage() {
           <AnimatePresence mode="wait">{selectedLocation && !isDetailOpen ? <PlacePreview key={selectedLocation.id} location={selectedLocation} onDetails={() => setIsDetailOpen(true)} onClose={handleCloseLocationDetail} /> : null}</AnimatePresence>
           </motion.section>
 
-          <LocationDetailSheet
-            key={selectedLocation?.id ?? "map-detail"}
-            isOpen={isDetailOpen && Boolean(selectedLocation)}
-            location={selectedLocation}
-            photos={selectedLocationPhotos}
-            reviews={selectedLocationReviews}
-            photosLoading={isSelectedLocationPhotosLoading}
-            reviewsLoading={isSelectedLocationReviewsLoading}
-            canContribute={Boolean(telegramUser && userProfile)}
-            onClose={handleCloseLocationDetail}
-            onCreateReview={handleCreateLocationReview}
-            onCreateReport={handleCreateLocationReport}
-            onCheckIn={handleCheckIn}
-          />
-
-          {/* Search sheet */}
-          <SearchSheet
-            isOpen={isSearchOpen}
-            locations={locations}
-            telegramInitData={telegramInitData}
-            onClose={() => setIsSearchOpen(false)}
-            onSelectLocation={(loc) => {
-              setLocations((current) =>
-                current.some((location) => location.id === loc.id) ? current : [loc, ...current]
-              );
-              handleOpenLocationDetail(loc);
-              setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
-            }}
-          />
-
         </>
       ) : null}
 
@@ -742,24 +800,37 @@ export function HomePage() {
             lightningOnly={lightningOnly}
             onLightning={handleToggleLightning}
           />
-          <LocationDetailSheet
-            key={selectedLocation?.id ?? "explore-detail"}
-            isOpen={isDetailOpen && Boolean(selectedLocation)}
-            location={selectedLocation}
-            photos={selectedLocationPhotos}
-            reviews={selectedLocationReviews}
-            photosLoading={isSelectedLocationPhotosLoading}
-            reviewsLoading={isSelectedLocationReviewsLoading}
-            canContribute={Boolean(telegramUser && userProfile)}
-            variant="page"
-            onClose={handleCloseLocationDetail}
-            onShowOnMap={handleShowSelectedOnMap}
-            onCreateReview={handleCreateLocationReview}
-            onCreateReport={handleCreateLocationReport}
-            onCheckIn={handleCheckIn}
-          />
         </>
       ) : null}
+
+      <LocationDetailSheet
+        key={selectedLocation?.id ?? "place-detail"}
+        isOpen={isDetailOpen && Boolean(selectedLocation)}
+        location={selectedLocation}
+        photos={selectedLocationPhotos}
+        reviews={selectedLocationReviews}
+        photosLoading={isSelectedLocationPhotosLoading}
+        reviewsLoading={isSelectedLocationReviewsLoading}
+        canContribute={Boolean(telegramUser && userProfile)}
+        variant={isHomeOpen || isDiscoverOpen ? "page" : "sheet"}
+        onClose={handleCloseLocationDetail}
+        onShowOnMap={isHomeOpen || isDiscoverOpen ? handleShowSelectedOnMap : undefined}
+        onCreateReview={handleCreateLocationReview}
+        onCreateReport={handleCreateLocationReport}
+        onCheckIn={handleCheckIn}
+      />
+
+      <SearchSheet
+        isOpen={isSearchOpen}
+        locations={isHomeOpen ? homeSearchLocations : locations}
+        telegramInitData={telegramInitData}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectLocation={(loc) => {
+          setLocations((current) => current.some((location) => location.id === loc.id) ? current : [loc, ...current]);
+          handleOpenLocationDetail(loc);
+          setFocusCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
+        }}
+      />
 
       {/* Error toast */}
       {error && (
@@ -872,7 +943,7 @@ export function HomePage() {
         </>
       ) : null}
 
-      <BottomNavigation active={isProfileOpen ? "profile" : isDiscoverOpen ? "explore" : "map"} onMap={leaveDiscoverForMap} onExplore={() => { setIsDiscoverOpen(true); setIsDetailOpen(false); }} onProfile={() => void openProfile()} onAdd={() => { if (!telegramUser || !userProfile) { setError("Open MoonLight in Telegram to add a place."); return; } leaveDiscoverForMap(); handleAddLocationFromProfile(); }} />
+      <BottomNavigation active={isProfileOpen ? "profile" : isHomeOpen ? "home" : isDiscoverOpen ? "explore" : "map"} onHome={openHome} onMap={openMap} onExplore={() => { setIsProfileOpen(false); setIsHomeOpen(false); setIsDiscoverOpen(true); setIsDetailOpen(false); }} onProfile={() => void openProfile()} onAdd={() => { if (!telegramUser || !userProfile) { setError("Open MoonLight in Telegram to add a place."); return; } openMap(); handleAddLocationFromProfile(); }} />
 
       {isOnboardingOpen && telegramUser && (
         <OnboardingFlow

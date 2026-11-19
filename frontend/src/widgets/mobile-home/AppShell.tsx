@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, BadgeCheck, Compass, MapPin, Plus, Search, Shield, SlidersHorizontal, UserRound, X, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgeCheck, Compass, House, MapPin, Plus, Search, Shield, SlidersHorizontal, UserRound, X, Zap } from "lucide-react";
 import { MAIN_CATEGORY_BY_VALUE } from "../../entities/location/model/mainCategories";
 import type { Location, LocationMainCategory } from "../../entities/location/model/types";
 
@@ -10,13 +10,14 @@ type ToolbarProps = {
   onLightning: () => void;
   lightningCount: number;
   onSearch: () => void;
+  onBack?: () => void;
   isAdmin: boolean;
   onAdmin: () => void;
 };
 
-export function ExploreToolbar({ category, onCategory, lightningOnly, onLightning, lightningCount, onSearch, isAdmin, onAdmin }: ToolbarProps) {
+export function ExploreToolbar({ category, onCategory, lightningOnly, onLightning, lightningCount, onSearch, onBack, isAdmin, onAdmin }: ToolbarProps) {
   return <motion.section className="explore-toolbar" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }}>
-    <button className="shell-search" onClick={onSearch}><Search size={19} strokeWidth={1.7} /><span>Search places…</span></button>
+    <div className="map-toolbar-row">{onBack ? <button type="button" className="map-toolbar-back" onClick={onBack} aria-label="Back to Home"><ArrowLeft size={20} /></button> : null}<button className="shell-search" onClick={onSearch}><Search size={19} strokeWidth={1.7} /><span>Search places…</span></button></div>
     <PlaceFilters category={category} onCategory={onCategory} lightningOnly={lightningOnly} onLightning={onLightning} lightningCount={lightningCount} isAdmin={isAdmin} onAdmin={onAdmin} />
   </motion.section>;
 }
@@ -62,7 +63,7 @@ export function PlacePreview({ location, onDetails, onClose }: { location: Locat
   </motion.article>;
 }
 
-export function BottomNavigation({ active, onMap, onExplore, onAdd, onProfile }: { active: "map" | "explore" | "profile"; onMap: () => void; onExplore: () => void; onAdd: () => void; onProfile: () => void }) {
-  const items = [{ id: "map", label: "Map", Icon: Compass, action: onMap }, { id: "explore", label: "Explore", Icon: Search, action: onExplore }, { id: "add", label: "Add place", Icon: Plus, action: onAdd }, { id: "profile", label: "Profile", Icon: UserRound, action: onProfile }];
+export function BottomNavigation({ active, onHome, onMap, onExplore, onAdd, onProfile }: { active: "home" | "map" | "explore" | "profile"; onHome: () => void; onMap: () => void; onExplore: () => void; onAdd: () => void; onProfile: () => void }) {
+  const items = [{ id: "home", label: "Home", Icon: House, action: onHome }, { id: "map", label: "Map", Icon: Compass, action: onMap }, { id: "explore", label: "Explore", Icon: Search, action: onExplore }, { id: "add", label: "Add place", Icon: Plus, action: onAdd }, { id: "profile", label: "Profile", Icon: UserRound, action: onProfile }];
   return <nav className="shell-bottom-nav" aria-label="Main navigation">{items.map(({ id, label, Icon, action }) => <motion.button key={id} whileTap={{ scale: .94 }} className={active === id ? "is-active" : ""} onClick={action} aria-current={active === id ? "page" : undefined}><span className="shell-bottom-nav__icon"><Icon size={20} strokeWidth={active === id ? 2 : 1.6} /><AnimatePresence>{active === id && <motion.span layoutId="active-nav" className="shell-bottom-nav__indicator" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}</AnimatePresence></span><span>{label}</span></motion.button>)}</nav>;
 }

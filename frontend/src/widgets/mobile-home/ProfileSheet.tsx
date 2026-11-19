@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { X, CalendarDays, MapPin, Plus } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, ChevronRight, Pencil, X } from "lucide-react";
 import type { TelegramUser, UserProfile } from "../../entities/user/model/types";
+import { ProfileArticle, type ProfileArticleKind } from "./ProfileArticle";
 
 type ProfileSheetProps = {
   isOpen: boolean;
@@ -16,143 +17,83 @@ type ProfileSheetProps = {
   onClose: () => void;
 };
 
-export function ProfileSheet({
-  isOpen,
-  profileInitial,
-  telegramUser,
-  userProfile,
-  placesAddedCount,
-  hasPendingSubmission,
-  isSavingProfile,
-  profileError,
-  onSaveProfile,
-  onAddLocationClick,
-  onClose,
-}: ProfileSheetProps) {
+export function ProfileSheet({ isOpen, profileInitial, telegramUser, userProfile, placesAddedCount,
+  hasPendingSubmission, isSavingProfile, profileError, onSaveProfile, onAddLocationClick, onClose }: ProfileSheetProps) {
+  const [view, setView] = useState<"menu" | "edit" | "activity" | ProfileArticleKind>("menu");
   const [nicknameInput, setNicknameInput] = useState(userProfile?.nickname ?? "");
   const [localError, setLocalError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setNicknameInput(userProfile?.nickname ?? "");
-  }, [userProfile?.nickname]);
-
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   const displayName = userProfile?.nickname?.trim() || telegramUser?.first_name?.trim() || "Telegram User";
-  const username = telegramUser?.username?.trim() ? `@${telegramUser.username.trim()}` : null;
+  const avatarUrl = userProfile?.avatar_url || telegramUser?.photo_url;
   const joinedDate = formatJoinedDate(userProfile?.created_at);
-
-  const handleSave = async () => {
-    const normalized = nicknameInput.trim();
-    if (normalized.length < 2) {
-      setLocalError("Nickname must be at least 2 characters.");
-      return;
-    }
-    await onSaveProfile(normalized);
-    setLocalError(null);
+  const isArticle = view === "privacy" || view === "terms" || view === "about";
+  const save = async () => {
+    const nickname = nicknameInput.trim();
+    if (nickname.length < 2) { setLocalError("Nickname must be at least 2 characters."); return; }
+    try { await onSaveProfile(nickname); setLocalError(null); setView("menu"); }
+    catch { /* The parent supplies the visible profile error. */ }
   };
 
   return (
-    <div className="sheet-backdrop" role="presentation" onClick={onClose}>
-      <section
-        className="bottom-sheet profile-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Profile"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="sheet-handle" />
-        <header className="sheet-header">
-          <h3>Profile</h3>
-          <button type="button" className="sheet-close" onClick={onClose} aria-label="Close profile">
-            <X size={16} />
-          </button>
-        </header>
-
-        <div className="profile-sheet__body">
-          <div className="profile-sheet__user">
-            <div className="profile-sheet__avatar-wrap">
-              <div className="profile-sheet__avatar" aria-hidden="true">
-                {profileInitial}
+    <section className="profile-page" role="region" aria-label="Profile menu">
+      <header className="profile-page__topbar">
+        <button type="button" onClick={view === "menu" || isArticle ? onClose : () => setView("menu")} aria-label={view === "menu" || isArticle ? "Close profile" : "Back to profile menu"}>
+          {view === "menu" || isArticle ? <X size={24} /> : <ArrowLeft size={22} />}
+        </button>
+        <strong>MoonLight</strong>
+        <span aria-hidden="true" />
+      </header>
+      <div className="profile-page__scroll" key={view}>
+        <div className="profile-page__content">
+          {view === "menu" ? <>
+            <div className="profile-page__identity">
+              <div className="profile-page__avatar" aria-hidden="true">
+                {avatarUrl ? <img src={avatarUrl} alt="" /> : profileInitial}
               </div>
+              <div className="profile-page__person">
+                <h1>{displayName}</h1>
+                <p>{userProfile?.created_at ? `Joined ${joinedDate}` : "MoonLight profile"}</p>
+              </div>
+              <button type="button" className="profile-page__edit-button" onClick={() => { setNicknameInput(userProfile?.nickname ?? ""); setLocalError(null); setView("edit"); }} disabled={!userProfile} aria-label="Edit profile"><Pencil size={19} /></button>
             </div>
-            <div className="profile-sheet__identity">
-              <h4>{displayName}</h4>
-              {username && <p>{username}</p>}
-            </div>
-          </div>
-
-          <div className="profile-sheet__stats">
-            <div className="profile-stat">
-              <div className="profile-stat__icon">
-                <CalendarDays size={14} />
-              </div>
-              <div className="profile-stat__meta">
-                <span className="profile-stat__label">Joined</span>
-                <strong className="profile-stat__value">{joinedDate}</strong>
-              </div>
-            </div>
-
-            <div className="profile-stat">
-              <div className="profile-stat__icon">
-                <MapPin size={14} />
-              </div>
-              <div className="profile-stat__meta">
-                <span className="profile-stat__label">Places added</span>
-                <strong className="profile-stat__value">{placesAddedCount}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="profile-sheet__actions">
-            <button type="button" className="profile-sheet__action" onClick={onAddLocationClick} disabled={hasPendingSubmission}>
-              <span className="profile-sheet__action-icon" aria-hidden="true">
-                <Plus size={16} />
-              </span>
-              <span className="profile-sheet__action-copy">
-                <strong>{hasPendingSubmission ? "Location pending confirmation" : "Add location"}</strong>
-                <span>{hasPendingSubmission ? "You can add another after this location is confirmed" : "Select a point on the map to start"}</span>
-              </span>
-            </button>
-          </div>
-
-          <div className="profile-sheet__edit">
+            <nav className="profile-page__menu" aria-label="Profile options">
+              <button type="button" onClick={onAddLocationClick} disabled={hasPendingSubmission || !userProfile}>
+                <span>Contribute</span><ChevronRight size={19} />
+              </button>
+              <button type="button" disabled title="Coming soon" aria-label="Contact us, coming soon">
+                <span>Contact us<small>Coming soon</small></span><ChevronRight size={19} />
+              </button>
+              <button type="button" onClick={() => setView("activity")}><span>Activity</span><ChevronRight size={19} /></button>
+              <button type="button" disabled title="Coming soon" aria-label="My saves, coming soon"><span>My saves<small>Coming soon</small></span><ChevronRight size={19} /></button>
+              <button type="button" onClick={() => setView("privacy")}><span>Privacy policy</span><ChevronRight size={19} /></button>
+              <button type="button" onClick={() => setView("terms")}><span>Terms of use</span><ChevronRight size={19} /></button>
+              <button type="button" onClick={() => setView("about")}><span>About MoonLight</span><ChevronRight size={19} /></button>
+              <button type="button" disabled title="Coming soon" aria-label="Delete account, coming soon"><span>Delete account<small>Coming soon</small></span><ChevronRight size={19} /></button>
+            </nav>
+            {hasPendingSubmission && <p className="profile-page__note">Your submitted place is pending confirmation.</p>}
+          </> : view === "edit" ? <div className="profile-page__subview">
+            <h1>Edit profile</h1>
             <label className="form-label" htmlFor="profile-nickname">Nickname</label>
-            <input
-              id="profile-nickname"
-              className="onboarding-input"
-              value={nicknameInput}
-              onChange={(event) => setNicknameInput(event.target.value)}
-              maxLength={32}
-              placeholder="Enter nickname"
-            />
-            {localError ? <p className="onboarding-error">{localError}</p> : null}
-            {profileError ? <p className="onboarding-error">{profileError}</p> : null}
-            <button type="button" className="btn-primary onboarding-submit" onClick={handleSave} disabled={isSavingProfile}>
-              {isSavingProfile ? "Saving..." : "Save profile"}
-            </button>
-          </div>
+            <input id="profile-nickname" className="onboarding-input" value={nicknameInput} onChange={(event) => setNicknameInput(event.target.value)} maxLength={32} placeholder="Enter nickname" />
+            {localError && <p className="onboarding-error">{localError}</p>}
+            {profileError && <p className="onboarding-error">{profileError}</p>}
+            <button type="button" className="btn-primary onboarding-submit" onClick={() => void save()} disabled={isSavingProfile || !userProfile}>{isSavingProfile ? "Saving..." : "Save profile"}</button>
+          </div> : isArticle ? <ProfileArticle kind={view} onBack={() => setView("menu")} /> : <div className="profile-page__subview">
+            <h1>Activity</h1>
+            <div className="profile-page__activity"><strong>{placesAddedCount}</strong><span>Places added</span></div>
+            {hasPendingSubmission && <p className="profile-page__note">One submitted place is pending confirmation.</p>}
+          </div>}
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
 
 function formatJoinedDate(createdAt?: string): string {
-  if (!createdAt) {
-    return "Not available";
-  }
-
+  if (!createdAt) return "Not available";
   const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) {
-    return "Not available";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
 }

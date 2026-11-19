@@ -50,7 +50,7 @@ function normalizeMainCategory(value: unknown, category: unknown): LocationMainC
     : "other";
 }
 
-function normalizeLocation(raw: ApiLocation): Location | null {
+export function normalizeLocation(raw: ApiLocation): Location | null {
   const id = toFiniteNumber(raw.id);
   const latitude = toFiniteNumber(raw.latitude ?? raw.lat);
   const longitude = toFiniteNumber(raw.longitude ?? raw.lon);
